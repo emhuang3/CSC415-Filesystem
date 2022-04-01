@@ -24,17 +24,81 @@
 #include "fsLow.h"
 #include "mfs.h"
 
+typedef struct vcb
+{
+	int block_size;
+	int total_blocks;
+	int total_free_blocks;
+	int fat_start;
+	int fat_len;
+	int free_block_start;
+	int dir_entr_start; // -> points to the root directory
+	int dir_entr_len;
+	int magic_num;
+
+} vcb;
+
+typedef struct fat
+{
+	int occupied;
+	int eof;
+	int next_block;
+} fat;
+
+typedef struct dir_entr
+{
+	int starting_block;
+	int size;
+	int file_type;
+	int permissions;
+	char filename[20];
+	uid_t user_ID;
+	gid_t group_ID;
+
+} dir_entr;
+
+char * filename;
+uint64_t volume_size;
+uint64_t block_size;
+char buffer[128];
+vcb  * VCB;
 
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	{
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 	/* TODO: Add any code you need to initialize your file system. */
 
+	startPartitionSystem(filename, &volume_size, &block_size);
+
+	VCB = malloc(512);
+
+	//buffer is updated with whatever is at position 0
+	LBAread(buffer, 1, 0); 
+
+	// check if magic numbers match
+	if (buffer == NULL)
+	{
+		VCB->magic_num = 3;
+		VCB->total_blocks = 1000000000;
+		VCB->block_size = 512;
+		// VCB->free_block_start = find_free_block(); //=> will also init a freespace bitmap
+		VCB->dir_entr_start = 2; // this might be where the root directory is positioned.
+		VCB->fat_start = 1;		// this is where the fat is positioned.
+	
+	LBAwrite(VCB, 1, 0);
+	}
+	
 	return 0;
 	}
 	
 	
 void exitFileSystem ()
 	{
-	printf ("System exiting\n");
+		//clean up vcb
+		free(VCB);
+		VCB = NULL;
+
+		//clean up free space bitmap
+
+		printf ("System exiting\n");
 	}
