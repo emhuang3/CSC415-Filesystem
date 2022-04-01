@@ -57,36 +57,51 @@ typedef struct dir_entr
 
 } dir_entr;
 
-char * filename;
-uint64_t volume_size;
-uint64_t block_size;
+// char * filename;
+// uint64_t volume_size;
+// uint64_t block_size;
+
 char buffer[128];
-vcb  * VCB;
+vcb * VCB;
 
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	{
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 	/* TODO: Add any code you need to initialize your file system. */
-
-	startPartitionSystem(filename, &volume_size, &block_size);
-
-	VCB = malloc(512);
+	
+		VCB = malloc(sizeof(VCB)*blockSize);
 
 	//buffer is updated with whatever is at position 0
-	LBAread(buffer, 1, 0); 
+		LBAread(buffer, 1, 0); 
 
 	// check if magic numbers match
-	if (buffer == NULL)
-	{
+
 		VCB->magic_num = 3;
-		VCB->total_blocks = 1000000000;
+		VCB->total_blocks = 10;
 		VCB->block_size = 512;
-		// VCB->free_block_start = find_free_block(); //=> will also init a freespace bitmap
+		// VCB->free_block_start = find_free_block();
 		VCB->dir_entr_start = 2; // this might be where the root directory is positioned.
 		VCB->fat_start = 1;		// this is where the fat is positioned.
+
+		// LBAwrite(/*bitmap*/, 5, VCB->free_block_start);
+		// init_bitmap();
 	
-	LBAwrite(VCB, 1, 0);
-	}
+		LBAwrite(VCB, 1, 0);
+
+	//  if (buffer == NULL)
+	// {
+	// 	VCB->magic_num = 3;
+	// 	VCB->total_blocks = 1000000000;
+	// 	VCB->block_size = 512;
+	// 	// VCB->free_block_start = find_free_block();
+	// 	VCB->dir_entr_start = 2; // this might be where the root directory is positioned.
+	// 	VCB->fat_start = 1;		// this is where the fat is positioned.
+
+	// 	// LBAwrite(/*bitmap*/, 5, VCB->free_block_start);
+	// 	// init_bitmap();
+	
+	// LBAwrite(VCB, 1, 0);
+	// }
 	
 	return 0;
 	}
