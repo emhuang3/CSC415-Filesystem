@@ -64,17 +64,20 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 	/* TODO: Add any code you need to initialize your file system. */
 	
-		VCB = malloc(sizeof(VCB) * 512);
+		VCB = malloc(blockSize);
 		
-	//buffer is updated with whatever is at position 0
+	//VCB is updated with whatever is at position 0
 		LBAread(VCB, 1, 0);
 		printf("debug: %d \n", VCB->magic_num);
 
-	// check if magic numbers match
-
-		if (VCB->magic_num != 0)
+	/*
+	 checking if magic number of block 0 is 3.
+	 if it is 3 then VCB is already formatted,
+	 and we don't need to initialize.
+	*/
+		if (VCB->magic_num != 3)
 		{
-			VCB->magic_num = 0;
+			VCB->magic_num = 3;
 			VCB->total_blocks = 10;
 			VCB->block_size = 512;
 			// VCB->free_block_start = find_free_block();
@@ -86,7 +89,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 			//checking if this works as advertised
 			LBAwrite(VCB, 1, 0);
-			LBAread(VCB, 1, 0); 
+			LBAread(VCB, 1, 0);
 			printf("debug: %d \n", VCB->magic_num);
 		}
 	
