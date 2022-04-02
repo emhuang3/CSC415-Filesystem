@@ -42,11 +42,11 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 	/* TODO: Add any code you need to initialize your file system. */
 	vcb * vcb_buffer = malloc(blockSize);	//default blockSize is 512
-	vcb * buffer = malloc(blockSize);
-	LBAread(buffer, 1, 0);	//
+	//vcb * buffer = malloc(blockSize);
+	LBAread(vcb_buffer, 1, 0);	//
 	
 	
-	if(buffer->magic_num != 3){
+	if(vcb_buffer->magic_num != 3){
 		vcb_buffer->block_size = 512;
 		vcb_buffer->total_blocks = 10000000;
 		//vcb_buffer->total_free_blocks = 5;
@@ -59,6 +59,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	}
 	
 
+	LBAwrite(vcb_buffer, 1, 0);
 	printf("Block Size: %d\n",vcb_buffer->block_size);
 	printf("Total Blocks: %d\n", vcb_buffer->total_blocks);
 	//printf("TotalFreeBlocks: %d\n", vcb_buffer->total_free_blocks);
@@ -68,8 +69,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	printf("Directory Entry Starts at : %d\n", vcb_buffer->dir_entr_start);
 	//printf("Dir Entry Length: %d\n", vcb_buffer->dir_entr_len);
 	printf("Magic Num: %d\n",vcb_buffer->magic_num);
-
-	LBAwrite(vcb_buffer, 1, 0);
 	
 
 
