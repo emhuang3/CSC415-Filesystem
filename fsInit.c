@@ -38,6 +38,15 @@ typedef struct vcb{
 	int magic_num;	//9
 }vcb;
 
+typedef struct dir_entr{
+	int start_block;
+	int size;
+	int file_type;
+	int persmissions;
+	char filename[20];
+	uid_t user_ID;
+	gid_t group_ID;
+}dir_entr;
 
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	{
@@ -51,9 +60,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	// printf("---%s---\n", vcb_buffer);
 	
 	if(vcb_buffer->magic_num != 3){
-		vcb_buffer->block_size = 512;
+		vcb_buffer->block_size = blockSize;
 		vcb_buffer->total_blocks = numberOfBlocks;
-		vcb_buffer->total_free_blocks = 5;
+		vcb_buffer->total_free_blocks = 8;
 		vcb_buffer->fat_start = 1;
 		vcb_buffer->fat_len = 6;
 		//vcb_buffer->free_block_start = 1;
@@ -75,15 +84,27 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	int byte_num = (int)ceil(vcb_buffer->total_blocks/8.0);	
 	printf("Number Of Bytes: %d\n", byte_num);
 	/*To find the number of blocks in free space divide bytes 
-	by blockSize; default block size is 512*/
-	int num_of_freespace_block = (int)ceil((float)byte_num/blockSize);
-	printf("Number Of Free Space Blocks: %d\n", num_of_freespace_block);
+	by blockSize; default block size is 512. Then read 
+	vcb buffer and then write the total num of free blocks to it*/
+	LBAread(vcb_buffer, 1, 0);
+	vcb_buffer->total_free_blocks = (int)ceil((float)byte_num/blockSize);
+	LBAwrite(vcb_buffer,1,0);
+	//int num_of_freespace_block = (int)ceil((float)byte_num/blockSize);
+	printf("Number Of Free Space Blocks: %d\n", vcb_buffer->total_free_blocks);
 
 	/*Now malloc freespace */
-	int * free_space = malloc(num_of_freespace_block*blockSize);
+	int * free_space = malloc(vcb_buffer->total_free_blocks*blockSize);
 	LBAwrite(free_space, 5, 1);
+	//mark the first 6 bits as used
+	for(int i = 0; i<6; i++){
+		free_space[i] = 1;
+		//printf("%d", free_space[i]);
+	}
+	
 	//write to vcb where free blocks start
+	LBAread(vcb_buffer, 1, 0);
 	vcb_buffer->free_block_start = 1;
+	LBAwrite(vcb_buffer,1,0);
 
 	//--------------------------------------------------------
 
