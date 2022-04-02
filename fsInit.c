@@ -26,6 +26,8 @@
 
 #include <math.h>
 
+#define NUM_Of_DIR_ENTR = 58;
+
 typedef struct vcb{
 	int block_size; 	//1
 	int total_blocks;	//2
@@ -48,6 +50,16 @@ typedef struct dir_entr{
 	gid_t group_ID;
 }dir_entr;
 
+int freeSpaceStart(int * free_space, int blocks){
+	free_space = realloc(free_space,sizeof(free_space) * blocks);
+	int i =0;
+	while(free_space[i]!=0){
+		i++;
+	}
+	//printf("Free Space starts at: %d\n", i+1);
+	return i+1;
+}
+
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	{
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
@@ -68,12 +80,10 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		vcb_buffer->free_block_start = 9;	//9 is random value for testing
 		vcb_buffer->dir_entr_start = 1;
 		vcb_buffer->dir_entr_len = 50;
-		vcb_buffer->magic_num = 3;
-
-		LBAwrite(vcb_buffer, 1, 0);
+		vcb_buffer->magic_num = 3;		
 	}
 	
-	
+	LBAwrite(vcb_buffer, 1, 0);
 
 	
 	//-------------------------------------------------------
@@ -112,7 +122,58 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	//--------------------------------------------------------
 	
+	printf("--------\nDirectory Entry is %ld Bytes\n", sizeof(dir_entr));
+	/*Lets say we want 50 direcotry entries. The size of a single 
+	directory entry is 44. So we need enough blocks to fit 
+	50*44 = 2200 bytes. For this we need at least 5 blocks.
+	But 5 blocks mean 5*512 = 2560 bytes, meaning we have 
+	room for for 8 more directory entries. So now we want 
+	58 directory entries. This will be defined up top*/
 	
+	dir_entr * dir_entr_array = malloc(5*blockSize);
+	for(int i =0; i<58;i++){
+		//Initialize each directory structure to be in a free state?
+		//dir_entr_array[i].file_type = 1;
+	}
+	/*call freeSpaceStart to find the next free space to be the
+	starting block for the next directory entry*/
+	int dir_entr_starting_block = freeSpaceStart(free_space, 5);
+	printf("Diretory Entry starts at %d\n", dir_entr_starting_block);
+
+	LBAread(dir_entr_array, 5,dir_entr_starting_block);
+
+	//set values for directory entry 0
+	dir_entr_array[0].start_block = dir_entr_starting_block;
+	dir_entr_array[0].size = sizeof(dir_entr);
+	dir_entr_array[0].file_type = 1;
+	//only user will have read, write,execute permissions
+	dir_entr_array[0].persmissions = 700;
+	strcpy(dir_entr_array[0].filename, ".");
+	//user will have access to root
+	dir_entr_array[0].user_ID = 1;
+	//groups will not have access to root
+	dir_entr_array[0].group_ID = 0;
+
+	//set values for directory entry 1;
+	dir_entr_array[1].start_block = dir_entr_starting_block;
+	dir_entr_array[0].size = sizeof(dir_entr);
+	dir_entr_array[1].file_type = 1;
+	//only user will have read, write,execute permissions
+	dir_entr_array[1].persmissions = 700;
+	strcpy(dir_entr_array[1].filename, "..");
+	//user will have access to root
+	dir_entr_array[1].user_ID = 1;
+	//groups will not have access to root
+	dir_entr_array[1].group_ID = 0;
+	LBAwrite(dir_entr_array, 5, dir_entr_starting_block);
+
+	//return starting block to vcb
+	vcb_buffer->dir_entr_start = dir_entr_starting_block;
+	LBAwrite(vcb_buffer, 1, 0);
+	//printf("Directory Entry Start in VCB is: %s\n", vcb_buffer->dir_entr_start);
+
+	printf("File[0] Name is: %s\n", dir_entr_array[0].filename);
+
 
 	//-------------------------------------------------------
 
