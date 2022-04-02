@@ -57,11 +57,7 @@ typedef struct dir_entr
 
 } dir_entr;
 
-// char * filename;
-// uint64_t volume_size;
-// uint64_t block_size;
-
-char buffer[512];
+vcb * buffer;
 vcb * VCB;
 
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
@@ -69,41 +65,34 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 	/* TODO: Add any code you need to initialize your file system. */
 	
-		VCB = malloc(sizeof(VCB) + (blockSize - sizeof(VCB)) + 1);
-
+		buffer = malloc(sizeof(buffer) * 512);
+		
 	//buffer is updated with whatever is at position 0
 		LBAread(buffer, 1, 0); 
+		printf("debug: %d \n", buffer->magic_num);
 
 	// check if magic numbers match
 
-		VCB->magic_num = 3;
-		VCB->total_blocks = 10;
-		VCB->block_size = 512;
-		// VCB->free_block_start = find_free_block();
-		VCB->dir_entr_start = 2; // this might be where the root directory is positioned.
-		VCB->fat_start = 1;		// this is where the fat is positioned.
+		if (buffer->magic_num != 3)
+		{
+			VCB = malloc(sizeof(VCB) * 512);
+			VCB->magic_num = 3;
+			VCB->total_blocks = 10;
+			VCB->block_size = 512;
+			// VCB->free_block_start = find_free_block();
+			VCB->dir_entr_start = 2; // this might be where the root directory is positioned.
+			VCB->fat_start = 1;		// this is where the fat is positioned.
 
-		// LBAwrite(/*bitmap*/, 5, VCB->free_block_start);
-		// init_bitmap();
+			// LBAwrite(/*bitmap*/, 5, VCB->free_block_start);
+			// init_bitmap();
 	
-		LBAwrite(VCB, 1, 0);
-
-	//  if (buffer == NULL)
-	// {
-	// 	VCB->magic_num = 3;
-	// 	VCB->total_blocks = 1000000000;
-	// 	VCB->block_size = 512;
-	// 	// VCB->free_block_start = find_free_block();
-	// 	VCB->dir_entr_start = 2; // this might be where the root directory is positioned.
-	// 	VCB->fat_start = 1;		// this is where the fat is positioned.
-
-	// 	// LBAwrite(/*bitmap*/, 5, VCB->free_block_start);
-	// 	// init_bitmap();
+			//checking if this works as advertised
+			LBAwrite(VCB, 1, 0);
+			LBAread(buffer, 1, 0); 
+			printf("debug: %d \n", buffer->magic_num);
+		}
 	
-	// LBAwrite(VCB, 1, 0);
-	// }
-	
-	return 0;
+		return 0;
 	}
 	
 	
