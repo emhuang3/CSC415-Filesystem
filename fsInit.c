@@ -62,16 +62,18 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	if(vcb_buffer->magic_num != 3){
 		vcb_buffer->block_size = blockSize;
 		vcb_buffer->total_blocks = numberOfBlocks;
-		vcb_buffer->total_free_blocks = 8;
+		vcb_buffer->total_free_blocks = 8;	//8 is random value for testing
 		vcb_buffer->fat_start = 1;
-		vcb_buffer->fat_len = 6;
-		//vcb_buffer->free_block_start = 1;
+		vcb_buffer->fat_len = 6;	//6 is random value for testing
+		vcb_buffer->free_block_start = 9;	//9 is random value for testing
 		vcb_buffer->dir_entr_start = 1;
 		vcb_buffer->dir_entr_len = 50;
 		vcb_buffer->magic_num = 3;
+
+		LBAwrite(vcb_buffer, 1, 0);
 	}
 	
-	LBAwrite(vcb_buffer, 1, 0);
+	
 
 	
 	//-------------------------------------------------------
@@ -86,7 +88,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	/*To find the number of blocks in free space divide bytes 
 	by blockSize; default block size is 512. Then read 
 	vcb buffer and then write the total num of free blocks to it*/
-	LBAread(vcb_buffer, 1, 0);
+	//LBAread(vcb_buffer, 1, 0);
 	vcb_buffer->total_free_blocks = (int)ceil((float)byte_num/blockSize);
 	LBAwrite(vcb_buffer,1,0);
 	//int num_of_freespace_block = (int)ceil((float)byte_num/blockSize);
@@ -97,16 +99,22 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	LBAwrite(free_space, 5, 1);
 	//mark the first 6 bits as used
 	for(int i = 0; i<6; i++){
+		//LBAread(free_space, 5, 1);
 		free_space[i] = 1;
+		LBAwrite(free_space, 5, 1);
 		//printf("%d", free_space[i]);
 	}
 	
 	//write to vcb where free blocks start
-	LBAread(vcb_buffer, 1, 0);
+	//LBAread(vcb_buffer, 1, 0);
 	vcb_buffer->free_block_start = 1;
 	LBAwrite(vcb_buffer,1,0);
 
 	//--------------------------------------------------------
+	
+	
+
+	//-------------------------------------------------------
 
 	printf("-------------\nBlock Size: %d\n",vcb_buffer->block_size);
 	printf("Total Blocks: %d\n", vcb_buffer->total_blocks);
