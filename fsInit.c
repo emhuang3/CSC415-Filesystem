@@ -57,7 +57,6 @@ typedef struct dir_entr
 
 } dir_entr;
 
-vcb * buffer;
 vcb * VCB;
 
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
@@ -65,18 +64,17 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 	/* TODO: Add any code you need to initialize your file system. */
 	
-		buffer = malloc(sizeof(buffer) * 512);
+		VCB = malloc(sizeof(VCB) * 512);
 		
 	//buffer is updated with whatever is at position 0
-		LBAread(buffer, 1, 0); 
-		printf("debug: %d \n", buffer->magic_num);
+		LBAread(VCB, 1, 0);
+		printf("debug: %d \n", VCB->magic_num);
 
 	// check if magic numbers match
 
-		if (buffer->magic_num != 3)
+		if (VCB->magic_num != 0)
 		{
-			VCB = malloc(sizeof(VCB) * 512);
-			VCB->magic_num = 3;
+			VCB->magic_num = 0;
 			VCB->total_blocks = 10;
 			VCB->block_size = 512;
 			// VCB->free_block_start = find_free_block();
@@ -88,8 +86,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 			//checking if this works as advertised
 			LBAwrite(VCB, 1, 0);
-			LBAread(buffer, 1, 0); 
-			printf("debug: %d \n", buffer->magic_num);
+			LBAread(VCB, 1, 0); 
+			printf("debug: %d \n", VCB->magic_num);
 		}
 	
 		return 0;
