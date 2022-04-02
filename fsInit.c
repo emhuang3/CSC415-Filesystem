@@ -24,6 +24,8 @@
 #include "fsLow.h"
 #include "mfs.h"
 
+#include <math.h>
+
 typedef struct vcb{
 	int block_size; 	//1
 	int total_blocks;	//2
@@ -45,33 +47,55 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	//vcb * buffer = malloc(blockSize);
 	LBAread(vcb_buffer, 1, 0);	//
 	
+	// printf("%llu", LBAread(vcb_buffer,1,0));
+	// printf("---%s---\n", vcb_buffer);
 	
 	if(vcb_buffer->magic_num != 3){
 		vcb_buffer->block_size = 512;
-		vcb_buffer->total_blocks = 10000000;
-		//vcb_buffer->total_free_blocks = 5;
+		vcb_buffer->total_blocks = numberOfBlocks;
+		vcb_buffer->total_free_blocks = 5;
 		vcb_buffer->fat_start = 1;
 		vcb_buffer->fat_len = 6;
-		vcb_buffer->free_block_start = 2;
+		//vcb_buffer->free_block_start = 1;
 		vcb_buffer->dir_entr_start = 1;
-		//vcb_buffer->dir_entr_len;
+		vcb_buffer->dir_entr_len = 50;
 		vcb_buffer->magic_num = 3;
 	}
 	
-
 	LBAwrite(vcb_buffer, 1, 0);
-	printf("Block Size: %d\n",vcb_buffer->block_size);
+
+	
+	//-------------------------------------------------------
+	
+	/*x # of blocks = x # of bits in default case 19531 blocks
+	so this means 19531 bits*/
+	printf("-------------\nNumber of Bits: %d\n",vcb_buffer->total_blocks);
+	/*To find # of bytes divide total blocks by 8.0 
+	a float because we want the ceiling value*/
+	int byte_num = (int)ceil(vcb_buffer->total_blocks/8.0);	
+	printf("Number Of Bytes: %d\n", byte_num);
+	/*To find the number of blocks in free space divide bytes 
+	by blockSize; default block size is 512*/
+	int num_of_freespace_block = (int)ceil((float)byte_num/blockSize);
+	printf("Number Of Free Space Blocks: %d\n", num_of_freespace_block);
+
+	/*Now malloc freespace */
+	int * free_space = malloc(num_of_freespace_block*blockSize);
+	LBAwrite(free_space, 5, 1);
+	//write to vcb where free blocks start
+	vcb_buffer->free_block_start = 1;
+
+	//--------------------------------------------------------
+
+	printf("-------------\nBlock Size: %d\n",vcb_buffer->block_size);
 	printf("Total Blocks: %d\n", vcb_buffer->total_blocks);
-	//printf("TotalFreeBlocks: %d\n", vcb_buffer->total_free_blocks);
+	printf("TotalFreeBlocks: %d\n", vcb_buffer->total_free_blocks);
 	printf("Fat Starts at: %d\n", vcb_buffer->fat_start);
 	printf("Fat Length: %d\n", vcb_buffer->fat_len);
 	printf("Free Block Starts at: %d\n", vcb_buffer->free_block_start);
 	printf("Directory Entry Starts at : %d\n", vcb_buffer->dir_entr_start);
-	//printf("Dir Entry Length: %d\n", vcb_buffer->dir_entr_len);
+	printf("Directory Entry Length: %d\n", vcb_buffer->dir_entr_len);
 	printf("Magic Num: %d\n",vcb_buffer->magic_num);
-	
-
-
 
 	return 0;
 	}
@@ -81,3 +105,5 @@ void exitFileSystem ()
 	{
 	printf ("System exiting\n");
 	}
+
+	
