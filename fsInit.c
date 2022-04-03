@@ -96,7 +96,7 @@ void update_free_block_start(int total_blocks)
 		if (buffer_bitmap[i] == 0)
 		{
 			VCB->free_block_start = i;
-			printf("updated free_space_start: %d \n", VCB->free_block_start);
+			printf("updated free_space_start: %d \n\n", VCB->free_block_start);
 			break;
 		}
 	}
@@ -152,7 +152,7 @@ int allocate_space(int amount_to_alloc, int total_blocks)
 		}
 		else if (i == total_blocks - 1) // implies their is no free space left.
 		{
-			printf("no more space available");
+			printf("no more space available\n");
 		}
 	}
 	printf("\n");
@@ -240,7 +240,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		
 		//VCB is updated with whatever is at position 0
 		LBAread(VCB, 1, 0);
-		printf("debug: %d \n", VCB->magic_num);
 
 		/*
 	 	checking if magic number of block 0 is 3.
@@ -248,9 +247,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	 	and we don't need to initialize.
 		*/
 
-		if (VCB->magic_num != 3)
+		if (VCB->magic_num != 2)
 		{
-			VCB->magic_num = 3;
+			VCB->magic_num = 2;
 			VCB->total_blocks = numberOfBlocks;
 			VCB->block_size = blockSize;
 
@@ -266,13 +265,14 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			// --------- INIT ROOT DIRECTORY ---------- //
 
 			// creating an array of 51 dir_entries
-			dir_entr * root_dir = malloc(sizeof(dir_entr) * 57); 
-			printf("Size of dir_entr: %ld \n", sizeof(dir_entr));
+			dir_entr * root_dir = malloc(sizeof(dir_entr) * 76); 
+
 			
-			printf("blocks to allocate for root: %ld \n", 1 + (sizeof(dir_entr) * 57) / 512);
+			printf("Size of dir_entr: %ld \n", sizeof(dir_entr));
+			printf("blocks to allocate for root: %ld \n\n", 1 + (sizeof(dir_entr) * 76) / 512);
 
 			root_dir[0].filename = ".";
-			root_dir[0].size = sizeof(dir_entr) * 57;
+			root_dir[0].size = sizeof(dir_entr) * 76;
 
 			// VCB->free_block_start will always be up to date
 			root_dir[0].starting_block = VCB->free_block_start; 
@@ -281,13 +281,12 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			printf("Size of root_dir: %d \n", root_dir[0].size);
 			printf("root_dir[0].starting_block : %d \n", root_dir[0].starting_block);
 			printf("root_dir[0].filename : %s \n", root_dir[0].filename);
-			printf("root_dir[1].filename : %s \n", root_dir[1].filename);
+			printf("root_dir[1].filename : %s \n\n", root_dir[1].filename);
 
 			for (int i = 0; i < 57; i++)
 			{
 				root_dir[i].next = NULL;
 			}
-
 
 			//-------ALLOC SPACE FOR ROOT DIRECTORY-------//
 		
