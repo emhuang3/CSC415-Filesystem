@@ -99,7 +99,6 @@ void update_free_block_start(int total_blocks)
 void allocate_space(int amount_to_alloc, int total_blocks, int * alloc_block_array)
 {
 	int j = 0; // j is an index for alloc_block_array
-	int to_be_allocated[amount_to_alloc];
 
 	// creating buffer_bitmap to read the freespace from disk
 	if (buffer_bitmap == NULL)
@@ -242,11 +241,11 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		int * allocated_spaces = malloc(sizeof(int) * 4); // this is size of 5
 		
-		// I want to allocate 5 blocks (e.g. 4 == 5)
-		allocate_space(4, numberOfBlocks, allocated_spaces); 
+		// I want to allocate 6 blocks (e.g. 5 == 6)
+		allocate_space(5, numberOfBlocks, allocated_spaces); 
 		
 		printf("These positions are given to caller: ");
-		for (int i = 0; i < 5; i++)
+		for (int i = 0; i < 6; i++)
 		{
 			printf("%d ", allocated_spaces[i]);
 		}
@@ -256,6 +255,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		//hexdump for freespace should update to reflect occupied
 
 		/*-----------------END TEST----------------*/
+
+
 		
 		return 0;
 	}
