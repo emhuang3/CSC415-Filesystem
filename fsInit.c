@@ -107,7 +107,7 @@ void allocate_space(int amount_to_alloc, int total_blocks, int * alloc_block_arr
 		buffer_bitmap = malloc(sizeof(buffer_bitmap) * total_blocks);
 	}
 
-	LBAread(buffer_bitmap, 5, 1); // blocks 1 -> 6 represent our freespace bitmap
+	LBAread(buffer_bitmap, 5, 1); // blocks 1 -> 5 represent our freespace bitmap
 
 	/*
 	this iterates through the buffer_bitmap and populates alloc_block_array
