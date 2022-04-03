@@ -62,7 +62,7 @@ int find_free_block(int numOfBlocks, uint64_t blockSize)
 	dir_entr * buffer = malloc(blockSize);
 
 	// creating bitmap for free space
-	uint8_t * bitmap = malloc(2560);
+	uint8_t * bitmap = malloc(sizeof(bitmap) * numOfBlocks);
 
 	//initializing index 0 to end-of-free-space bitmap, since block 0 should hold our VCB
 	int numOfFreeSpaceBlocks = 5;
@@ -132,9 +132,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	 	and we don't need to initialize.
 		*/
 
-		if (VCB->magic_num != 2)
+		if (VCB->magic_num != 3)
 		{
-			VCB->magic_num = 2;
+			VCB->magic_num = 3;
 			VCB->total_blocks = 10;
 			VCB->block_size = 512;
 			VCB->free_block_start = find_free_block(numberOfBlocks, blockSize);
