@@ -64,7 +64,7 @@ int find_free_block(int numOfBlocks, uint64_t blockSize)
 	// creating bitmap for free space
 	uint8_t * bitmap = malloc(sizeof(bitmap) * numOfBlocks);
 
-	//initializing index 0 to end-of-free-space bitmap, since block 0 should hold our VCB
+	//initializing dedicated block space for VCB and freespace bitmap
 	int numOfFreeSpaceBlocks = 5;
 	printf("blocks for bitmap: %d \n", numOfFreeSpaceBlocks);
 	for (int i = 0; i <= numOfFreeSpaceBlocks + 1; i++)
