@@ -83,12 +83,12 @@ void update_free_block_start(int total_blocks)
 	LBAread(buffer_bitmap, 5, 1);
 
 	//finding the first free block in the freespace bitmap
-	for (int i = 1; i < total_blocks; i++)
+	for (int i = 0; i < total_blocks; i++)
 	{
 		if (buffer_bitmap[i] == 0)
 		{
 			VCB->free_block_start = i;
-			printf("updated free_space_start: \n", VCB->free_block_start);
+			printf("updated free_space_start: %d \n", VCB->free_block_start);
 			break;
 		}
 	}
@@ -127,7 +127,7 @@ void allocate_space(int amount_to_alloc, int total_blocks, int * alloc_block_arr
 		}
 		else if (j == amount_to_alloc + 1) // exits if no more blocks need to be allocated.
 		{
-			break;
+			i = total_blocks;
 		}
 		else if (i == total_blocks - 1) // implies their is no free space left.
 		{
@@ -135,13 +135,11 @@ void allocate_space(int amount_to_alloc, int total_blocks, int * alloc_block_arr
 		}
 	}
 
-	// updates VCB with new first free block position.
-	update_free_block_start(total_blocks);
-
 	// push updated bitmap to disk
 	LBAwrite(buffer_bitmap, 5, 1);
 
-	return alloc_block_array;
+	// updates VCB with new first free block position.
+	update_free_block_start(total_blocks);
 }
 
 void init_bitmap(int numOfBlocks, uint64_t blockSize)
@@ -163,15 +161,17 @@ void init_bitmap(int numOfBlocks, uint64_t blockSize)
 	int first_free_block = 0;
 	
 	//creating buffer to read if a block is empty or not
-	dir_entr * buffer = malloc(blockSize);
+	dir_entr * buffer_block = malloc(blockSize);
 
 	// creating bitmap for free space
-	uint8_t * bitmap = malloc(sizeof(bitmap) * numOfBlocks);
+	if (buffer_bitmap == NULL)
+	{
+		buffer_bitmap = malloc(sizeof(buffer_bitmap) * numOfBlocks);
+	}
+	
 
 	//initializing dedicated block space for VCB and freespace bitmap
-	int numOfFreeSpaceBlocks = 5;
-	printf("blocks for bitmap: %d \n", numOfFreeSpaceBlocks);
-	for (int i = 0; i <= numOfFreeSpaceBlocks + 1; i++)
+	for (int i = 0; i <= 5 + 1; i++)
 	{
 		/*
 		 WARNING: will probably have to call a move() function for 
@@ -179,26 +179,30 @@ void init_bitmap(int numOfBlocks, uint64_t blockSize)
 		 freespace bitmap
 		 */
 
-		bitmap[i] = 1;
+		buffer_bitmap[i] = 1;
 	}
 	
-	//iterating through bitmap and starting after the dedicate space for vcb and freespace bitmap
-	for (int i = numOfFreeSpaceBlocks + 1; i < numOfBlocks; i++)
+	/*
+	iterating through bitmap and starting after the dedicate space 
+	for vcb and freespace bitmap (e.g 1 block for + 5 blocks for freespace)
+	*/
+
+	for (int i = 6; i < numOfBlocks; i++)
 	{
-		LBAread(buffer, 1, i);
+		LBAread(buffer_block, 1, i);
 
 		// checking if block is empty, and updating bitmap
-		if (buffer->occupied != 1)
+		if (buffer_block->occupied != 1)
 		{
-			bitmap[i] = 0;
+			buffer_bitmap[i] = 0;
 		}
 		else 
 		{
-			bitmap[i] = 1;
+			buffer_bitmap[i] = 1;
 		}
 	}
 
-	LBAwrite(bitmap, numOfFreeSpaceBlocks, 1);
+	LBAwrite(buffer_bitmap, 5, 1);
 
 	update_free_block_start(numOfBlocks);
 }
@@ -220,9 +224,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	 	and we don't need to initialize.
 		*/
 
-		if (VCB->magic_num != 3)
+		if (VCB->magic_num != 0)
 		{
-			VCB->magic_num = 3;
+			VCB->magic_num = 0;
 			VCB->total_blocks = numberOfBlocks;
 			VCB->block_size = blockSize;
 
@@ -236,10 +240,10 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		//------------TESTING allocate_space() function----------//
 
-		int * allocated_spaces = malloc(sizeof(int) * 5);
+		int * allocated_spaces = malloc(sizeof(int) * 4); // this is size of 5
 		
-		// I want to allocate 5 blocks
-		allocate_space(5, numberOfBlocks, allocated_spaces); 
+		// I want to allocate 5 blocks (e.g. 4 == 5)
+		allocate_space(4, numberOfBlocks, allocated_spaces); 
 		
 		printf("These positions are given to caller: ");
 		for (int i = 0; i < 5; i++)
@@ -249,7 +253,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		printf("\n");
 		
 
-		//hexdump for freespace should update with new used spaces
+		//hexdump for freespace should update to reflect occupied
 
 		/*-----------------END TEST----------------*/
 		
