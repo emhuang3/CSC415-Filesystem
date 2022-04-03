@@ -69,12 +69,16 @@ int find_free_block(int numOfBlocks, uint64_t blockSize)
 	printf("blocks for bitmap: %d \n", numOfFreeSpaceBlocks);
 	for (int i = 0; i <= numOfFreeSpaceBlocks + 1; i++)
 	{
+		/*
+		 WARNING: will probably have to call a move() function for 
+		 file/directory if they are occupying block space for the 
+		 freespace bitmap
+		 */
+
 		bitmap[i] = 1;
 	}
 	
-	bitmap[0] = 1;
-	
-	//initialize bitmap while 
+	//iterating through bitmap and starting after the dedicate space for vcb and freespace bitmap
 	for (int i = numOfFreeSpaceBlocks + 1; i < numOfBlocks; i++)
 	{
 		LBAread(buffer, 1, i);
@@ -99,17 +103,7 @@ int find_free_block(int numOfBlocks, uint64_t blockSize)
 		}
 	}
 
-	// printf("bitmap: ");
-	// for (int i = 0; i < numOfBlocks; i++)
-	// {
-	// 	printf("%d ", bitmap[i]);
-	// }
-	// 	printf("\n");
-
 	LBAwrite(bitmap, numOfFreeSpaceBlocks, 1);
-
-	// free(buffer);
-	// buffer = NULL;
 
 	return first_free_block;
 }
@@ -144,23 +138,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			VCB->total_blocks = 10;
 			VCB->block_size = 512;
 			VCB->free_block_start = find_free_block(numberOfBlocks, blockSize);
-			VCB->dir_entr_start = 2; // this might be where the root directory is positioned.
-			VCB->fat_start = 1;		// this is where the fat is positioned.
-
-			// LBAwrite(/*bitmap*/, 5, VCB->free_block_start);
-			// init_bitmap();
-	
-			//checking if this works as advertised
-			LBAwrite(VCB, 1, 0);
-			LBAread(VCB, 1, 0);
-			printf("magic number: %d \n", VCB->magic_num);
+			VCB->dir_entr_start = 2;  // this might be where the root directory is positioned.
+			VCB->fat_start = 1;		  // this is where the fat is positioned.
 		}
-
-		// free(bitmap);
-		// bitmap = NULL;
-
-		// free(VCB);
-		// VCB = NULL;
 
 		printf("entered\n");
 		
@@ -170,11 +150,5 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 void exitFileSystem ()
 	{
-		//clean up vcb
-		// free(VCB);
-		// VCB = NULL;
-
-		//clean up free space bitmap
-
 		printf ("System exiting\n");
 	}
