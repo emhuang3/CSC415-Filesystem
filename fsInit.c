@@ -40,6 +40,8 @@ typedef struct vcb
 
 } vcb;
 
+vcb * VCB;
+
 typedef struct dir_entr
 {
 	int starting_block;
@@ -53,8 +55,65 @@ typedef struct dir_entr
 
 } dir_entr;
 
+void update_free_block_start(int total_blocks) 
+{
 
-int find_free_block(int numOfBlocks, uint64_t blockSize)
+	uint8_t * buffer_bitmap = malloc(sizeof(buffer_bitmap) * total_blocks);
+	LBAread(buffer_bitmap, 5, 1);
+
+	//finding the first free block in the freespace bitmap
+	for (int i = 1; i < total_blocks; i++)
+	{
+		if (buffer_bitmap[i] == 0)
+		{
+			VCB->free_block_start = i;
+			break;
+		}
+	}
+}
+
+//This function will retrun an array of free positions to the caller
+int * allocate_space(int amount_to_alloc, int total_blocks)
+{
+	int first_free_block;
+	int amount_left = amount_to_alloc;
+	int * alloc_block_array = malloc(sizeof(int) * amount_to_alloc);
+
+	// creating buffer_bitmap to read the freespace from disk
+	uint8_t * buffer_bitmap = malloc(sizeof(buffer_bitmap) * total_blocks);
+	LBAread(buffer_bitmap, 5, 1); // blocks 1 -> 6 represent our freespace bitmap
+
+	/*
+	this iterates through the buffer_bitmap and populates alloc_block_array
+	with the position of free blocks to return to caller. caller could use this
+	array of free positions to populate with LBAwrite(FILE, 1, alloc_block_array[i]).
+	*/
+
+	for (int i = VCB->free_block_start ; i < total_blocks; i++)
+	{
+		if (buffer_bitmap[i] == 0 && amount_left != 0)
+		{
+			alloc_block_array[i] = i;
+			buffer_bitmap[i] = 1;
+			amount_left--;
+		}
+		else if (amount_left == 0)
+		{
+			break;
+		}
+		else if (i == total_blocks - 1)
+		{
+			printf("no more space available");
+		}
+	}
+
+	//updates VCB with new first free block position.
+	update_free_block_start(total_blocks);
+
+	return alloc_block_array;
+}
+
+void init_bitmap(int numOfBlocks, uint64_t blockSize)
 {
 
 	/*
@@ -108,19 +167,9 @@ int find_free_block(int numOfBlocks, uint64_t blockSize)
 		}
 	}
 
-	//finding the first free block in the freespace bitmap
-	for (int i = 1; i < numOfBlocks; i++)
-	{
-		if (bitmap[i] == 0)
-		{
-			first_free_block = i;
-			break;
-		}
-	}
-
 	LBAwrite(bitmap, numOfFreeSpaceBlocks, 1);
 
-	return first_free_block;
+	update_free_block_start(numOfBlocks);
 }
 
 typedef struct fat
@@ -135,7 +184,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 	/* TODO: Add any code you need to initialize your file system. */
 	
-		vcb * VCB = malloc(blockSize);
+		VCB = malloc(blockSize);
 		
 		//VCB is updated with whatever is at position 0
 		LBAread(VCB, 1, 0);
@@ -150,9 +199,12 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		if (VCB->magic_num != 0)
 		{
 			VCB->magic_num = 0;
-			VCB->total_blocks = 10;
-			VCB->block_size = 512;
-			VCB->free_block_start = find_free_block(numberOfBlocks, blockSize);
+			VCB->total_blocks = numberOfBlocks;
+			VCB->block_size = blockSize;
+
+			//init_bitmap() also returns the first free block in freespace bitmap
+			init_bitmap(numberOfBlocks, blockSize); 
+			update_free_block_start(blockSize);
 			VCB->dir_entr_start = 6;  // this might be where the root directory is positioned.
 			//VCB->fat_start;		  // this is where the fat is positioned.
 		}
