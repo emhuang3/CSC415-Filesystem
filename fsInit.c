@@ -56,6 +56,20 @@ typedef struct dir_entr
 
 int find_free_block(int numOfBlocks, uint64_t blockSize)
 {
+
+	/*
+	 Testing that blocks are being read properly 
+	 by adding a temporary directory to block 10, to 
+	 see if it shows up in hexdump.
+	 */
+	dir_entr * test_dir = malloc(blockSize);
+	test_dir->occupied = 1;
+	LBAwrite(test_dir, 1, 10);
+
+	/*-----------------END TEST----------------*/
+
+
+
 	int first_free_block = 0;
 	
 	//creating buffer to read if a block is empty or not
@@ -132,17 +146,17 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	 	and we don't need to initialize.
 		*/
 
-		if (VCB->magic_num != 3)
+		if (VCB->magic_num != 0)
 		{
-			VCB->magic_num = 3;
+			VCB->magic_num = 0;
 			VCB->total_blocks = 10;
 			VCB->block_size = 512;
 			VCB->free_block_start = find_free_block(numberOfBlocks, blockSize);
-			VCB->dir_entr_start = 2;  // this might be where the root directory is positioned.
-			VCB->fat_start = 1;		  // this is where the fat is positioned.
+			VCB->dir_entr_start = 6;  // this might be where the root directory is positioned.
+			//VCB->fat_start;		  // this is where the fat is positioned.
 		}
 
-		printf("entered\n");
+		printf("first free block: %d\n", VCB->free_block_start);
 		
 		return 0;
 	}
