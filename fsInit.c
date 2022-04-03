@@ -47,10 +47,18 @@ typedef struct dir_entr
 {
 	int starting_block;
 	int size;
+
+	// used tell if this is a file or directory
 	int file_type;
+
+	// used to check if this dir_entr occupies a block during initial format
 	int occupied;
+
+	// points to the next file. if null then it is free
+	int next; 
+
 	int permissions;
-	char filename[20];
+	char * filename;
 	uid_t user_ID;
 	gid_t group_ID;
 
@@ -96,8 +104,9 @@ void update_free_block_start(int total_blocks)
 
 //This function will retrun an array of free positions to the caller
 
-void allocate_space(int amount_to_alloc, int total_blocks, int * alloc_block_array)
+int allocate_space(int amount_to_alloc, int total_blocks)
 {
+	int previous_free_block_start = VCB->free_block_start;
 	int j = 0; // j is an index for alloc_block_array
 
 	// creating buffer_bitmap to read the freespace from disk
@@ -115,14 +124,27 @@ void allocate_space(int amount_to_alloc, int total_blocks, int * alloc_block_arr
 	LBAwrite(FILE, 1, alloc_block_array[i]) inside a loop.
 	*/
 
+	printf("These positions are given to caller and written to disk: \n");
 	for (int i = VCB->free_block_start ; i < total_blocks; i++)
 	{
 		
-		if (buffer_bitmap[i] == 0 && j <= amount_to_alloc)
+		if (j <= amount_to_alloc)
 		{
-			(alloc_block_array)[j] = i;
-			buffer_bitmap[i] = 1;
-			j++;
+			
+			// block is free. Nothing to move
+			if (buffer_bitmap[i] == 0)
+			{
+				printf("block %d freely written to \n", i);
+				buffer_bitmap[i] = 1;
+				j++;
+			}
+			else
+			{
+				printf("block %d was moved then written to \n", i);
+				//run a move() function to move stuff in block somewhere else.
+				buffer_bitmap[i] = 1;
+				j++;
+			}
 		}
 		else if (j == amount_to_alloc + 1) // exits if no more blocks need to be allocated.
 		{
@@ -133,12 +155,15 @@ void allocate_space(int amount_to_alloc, int total_blocks, int * alloc_block_arr
 			printf("no more space available");
 		}
 	}
+	printf("\n");
 
 	// push updated bitmap to disk
 	LBAwrite(buffer_bitmap, 5, 1);
 
 	// updates VCB with new first free block position.
 	update_free_block_start(total_blocks);
+
+	return previous_free_block_start;
 }
 
 void init_bitmap(int numOfBlocks, uint64_t blockSize)
@@ -237,27 +262,49 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 			LBAwrite(VCB, 1, 0);
 
+
 			// --------- INIT ROOT DIRECTORY ---------- //
+
+			// creating an array of 51 dir_entries
+			dir_entr * root_dir = malloc(sizeof(dir_entr) * 57); 
+			printf("Size of dir_entr: %ld \n", sizeof(dir_entr));
 			
+			printf("blocks to allocate for root: %ld \n", 1 + (sizeof(dir_entr) * 57) / 512);
+
+			root_dir[0].filename = ".";
+			root_dir[0].size = sizeof(dir_entr) * 57;
+
+			// VCB->free_block_start will always be up to date
+			root_dir[0].starting_block = VCB->free_block_start; 
+			root_dir[1].filename = "..";
+
+			printf("Size of root_dir: %d \n", root_dir[0].size);
+			printf("root_dir[0].starting_block : %d \n", root_dir[0].starting_block);
+			printf("root_dir[0].filename : %s \n", root_dir[0].filename);
+			printf("root_dir[1].filename : %s \n", root_dir[1].filename);
+
+			for (int i = 0; i < 57; i++)
+			{
+				root_dir[i].next = NULL;
+			}
+
 
 			//-------ALLOC SPACE FOR ROOT DIRECTORY-------//
+		
+			/*
+			 I want to allocate 6. VCB->free_block_start will
+			 be updated after calling allocate_space() so I will 
+			 retrieve the previous free_start
+			 */
 
-			int * allocated_spaces = malloc(sizeof(int) * 4); // this is size of 5
+			int previous_free_block_start = allocate_space(5, numberOfBlocks); 
 		
-			// I want to allocate 6 blocks (e.g. 5 == 6)
-			allocate_space(5, numberOfBlocks, allocated_spaces); 
-		
-			printf("These positions are given to caller: ");
 			for (int i = 0; i < 6; i++)
 			{
-				printf("%d ", allocated_spaces[i]);
+				LBAwrite(root_dir, 6, previous_free_block_start);
 			}
-			printf("\n");
 
 			//hexdump for freespace should update to reflect occupied
-
-
-			// -------- write root dir to allocated space on disk --------- //
 
 		}
 
