@@ -64,6 +64,9 @@ typedef struct fat
 	int next_block;
 } fat;
 
+uint8_t * buffer_bitmap;
+
+
 void update_free_block_start(int total_blocks) 
 {
 
@@ -72,7 +75,11 @@ void update_free_block_start(int total_blocks)
 	 that way I can iterate through the freespace bitmap
 	 */
 
-	uint8_t * buffer_bitmap = malloc(sizeof(buffer_bitmap) * total_blocks);
+	if (buffer_bitmap == NULL)
+	{
+		buffer_bitmap = malloc(sizeof(buffer_bitmap) * total_blocks);
+	}
+	
 	LBAread(buffer_bitmap, 5, 1);
 
 	//finding the first free block in the freespace bitmap
@@ -81,19 +88,25 @@ void update_free_block_start(int total_blocks)
 		if (buffer_bitmap[i] == 0)
 		{
 			VCB->free_block_start = i;
+			printf("updated free_space_start: \n", VCB->free_block_start);
 			break;
 		}
 	}
 }
 
 //This function will retrun an array of free positions to the caller
-int * allocate_space(int amount_to_alloc, int total_blocks)
+
+void allocate_space(int amount_to_alloc, int total_blocks, int * alloc_block_array)
 {
-	int amount_left = amount_to_alloc;
-	int * alloc_block_array = malloc(sizeof(int) * amount_to_alloc);
+	int j = 0; // j is an index for alloc_block_array
+	int to_be_allocated[amount_to_alloc];
 
 	// creating buffer_bitmap to read the freespace from disk
-	uint8_t * buffer_bitmap = malloc(sizeof(buffer_bitmap) * total_blocks);
+	if (buffer_bitmap == NULL)
+	{
+		buffer_bitmap = malloc(sizeof(buffer_bitmap) * total_blocks);
+	}
+
 	LBAread(buffer_bitmap, 5, 1); // blocks 1 -> 6 represent our freespace bitmap
 
 	/*
@@ -105,13 +118,14 @@ int * allocate_space(int amount_to_alloc, int total_blocks)
 
 	for (int i = VCB->free_block_start ; i < total_blocks; i++)
 	{
-		if (buffer_bitmap[i] == 0 && amount_left != 0)
+		
+		if (buffer_bitmap[i] == 0 && j <= amount_to_alloc)
 		{
-			alloc_block_array[i] = i;
+			(alloc_block_array)[j] = i;
 			buffer_bitmap[i] = 1;
-			amount_left--;
+			j++;
 		}
-		else if (amount_left == 0) // exits if no more blocks need to be allocated.
+		else if (j == amount_to_alloc + 1) // exits if no more blocks need to be allocated.
 		{
 			break;
 		}
@@ -121,8 +135,11 @@ int * allocate_space(int amount_to_alloc, int total_blocks)
 		}
 	}
 
-	//updates VCB with new first free block position.
+	// updates VCB with new first free block position.
 	update_free_block_start(total_blocks);
+
+	// push updated bitmap to disk
+	LBAwrite(buffer_bitmap, 5, 1);
 
 	return alloc_block_array;
 }
@@ -203,9 +220,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	 	and we don't need to initialize.
 		*/
 
-		if (VCB->magic_num != 0)
+		if (VCB->magic_num != 3)
 		{
-			VCB->magic_num = 0;
+			VCB->magic_num = 3;
 			VCB->total_blocks = numberOfBlocks;
 			VCB->block_size = blockSize;
 
@@ -216,7 +233,25 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			//VCB->fat_start;		  // this is where the fat is positioned.
 		}
 
-		printf("first free block: %d\n", VCB->free_block_start);
+
+		//------------TESTING allocate_space() function----------//
+
+		int * allocated_spaces = malloc(sizeof(int) * 5);
+		
+		// I want to allocate 5 blocks
+		allocate_space(5, numberOfBlocks, allocated_spaces); 
+		
+		printf("These positions are given to caller: ");
+		for (int i = 0; i < 5; i++)
+		{
+			printf("%d ", allocated_spaces[i]);
+		}
+		printf("\n");
+		
+
+		//hexdump for freespace should update with new used spaces
+
+		/*-----------------END TEST----------------*/
 		
 		return 0;
 	}
