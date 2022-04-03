@@ -108,6 +108,7 @@ int find_free_block(int numOfBlocks, uint64_t blockSize)
 		}
 	}
 
+	//finding the first free block in the freespace bitmap
 	for (int i = 1; i < numOfBlocks; i++)
 	{
 		if (bitmap[i] == 0)
