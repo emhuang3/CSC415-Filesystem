@@ -223,9 +223,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	 	and we don't need to initialize.
 		*/
 
-		if (VCB->magic_num != 0)
+		if (VCB->magic_num != 3)
 		{
-			VCB->magic_num = 0;
+			VCB->magic_num = 3;
 			VCB->total_blocks = numberOfBlocks;
 			VCB->block_size = blockSize;
 
@@ -234,30 +234,34 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			update_free_block_start(blockSize);
 			VCB->dir_entr_start = 6;  // this might be where the root directory is positioned.
 			//VCB->fat_start;		  // this is where the fat is positioned.
+
+			LBAwrite(VCB, 1, 0);
+
+			// --------- INIT ROOT DIRECTORY ---------- //
+			
+
+			//-------ALLOC SPACE FOR ROOT DIRECTORY-------//
+
+			int * allocated_spaces = malloc(sizeof(int) * 4); // this is size of 5
+		
+			// I want to allocate 6 blocks (e.g. 5 == 6)
+			allocate_space(5, numberOfBlocks, allocated_spaces); 
+		
+			printf("These positions are given to caller: ");
+			for (int i = 0; i < 6; i++)
+			{
+				printf("%d ", allocated_spaces[i]);
+			}
+			printf("\n");
+
+			//hexdump for freespace should update to reflect occupied
+
+
+			// -------- write root dir to allocated space on disk --------- //
+
 		}
 
 
-		//------------TESTING allocate_space() function----------//
-
-		int * allocated_spaces = malloc(sizeof(int) * 4); // this is size of 5
-		
-		// I want to allocate 6 blocks (e.g. 5 == 6)
-		allocate_space(5, numberOfBlocks, allocated_spaces); 
-		
-		printf("These positions are given to caller: ");
-		for (int i = 0; i < 6; i++)
-		{
-			printf("%d ", allocated_spaces[i]);
-		}
-		printf("\n");
-		
-
-		//hexdump for freespace should update to reflect occupied
-
-		/*-----------------END TEST----------------*/
-
-
-		
 		return 0;
 	}
 	
