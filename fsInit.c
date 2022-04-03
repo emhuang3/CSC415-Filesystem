@@ -34,12 +34,13 @@ typedef struct vcb
 	int fat_start;
 	int fat_len;
 	int free_block_start;
-	int dir_entr_start; // -> points to the root directory
+	int dir_entr_start;
 	int dir_entr_len;
 	int magic_num;
 
 } vcb;
 
+// VCB is declared globally here
 vcb * VCB;
 
 typedef struct dir_entr
@@ -55,8 +56,21 @@ typedef struct dir_entr
 
 } dir_entr;
 
+//probably don't need this for now
+typedef struct fat
+{
+	int occupied;
+	int eof;
+	int next_block;
+} fat;
+
 void update_free_block_start(int total_blocks) 
 {
+
+	/*
+	 reading free space into buffer from disk, 
+	 that way I can iterate through the freespace bitmap
+	 */
 
 	uint8_t * buffer_bitmap = malloc(sizeof(buffer_bitmap) * total_blocks);
 	LBAread(buffer_bitmap, 5, 1);
@@ -75,7 +89,6 @@ void update_free_block_start(int total_blocks)
 //This function will retrun an array of free positions to the caller
 int * allocate_space(int amount_to_alloc, int total_blocks)
 {
-	int first_free_block;
 	int amount_left = amount_to_alloc;
 	int * alloc_block_array = malloc(sizeof(int) * amount_to_alloc);
 
@@ -86,7 +99,8 @@ int * allocate_space(int amount_to_alloc, int total_blocks)
 	/*
 	this iterates through the buffer_bitmap and populates alloc_block_array
 	with the position of free blocks to return to caller. caller could use this
-	array of free positions to populate with LBAwrite(FILE, 1, alloc_block_array[i]).
+	array of free positions to populate blocks using something like  
+	LBAwrite(FILE, 1, alloc_block_array[i]) inside a loop.
 	*/
 
 	for (int i = VCB->free_block_start ; i < total_blocks; i++)
@@ -97,11 +111,11 @@ int * allocate_space(int amount_to_alloc, int total_blocks)
 			buffer_bitmap[i] = 1;
 			amount_left--;
 		}
-		else if (amount_left == 0)
+		else if (amount_left == 0) // exits if no more blocks need to be allocated.
 		{
 			break;
 		}
-		else if (i == total_blocks - 1)
+		else if (i == total_blocks - 1) // implies their is no free space left.
 		{
 			printf("no more space available");
 		}
@@ -171,13 +185,6 @@ void init_bitmap(int numOfBlocks, uint64_t blockSize)
 
 	update_free_block_start(numOfBlocks);
 }
-
-typedef struct fat
-{
-	int occupied;
-	int eof;
-	int next_block;
-} fat;
 
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	{
