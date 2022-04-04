@@ -50,9 +50,6 @@ typedef struct dir_entr
 	// used tell if this is a file or directory
 	int file_type;
 
-	// used to check if this dir_entr occupies a block during initial format
-	int occupied;
-
 	// points to the next file. if null then it is free
 	int next; 
 
@@ -162,51 +159,42 @@ int allocate_space(int amount_to_alloc, int total_blocks)
 	return previous_free_block_start;
 }
 
+/*
+This function is used for cleaning the blocks.
+This is done to produce nice looking hexdumps.
+*/
+
+void flush_blocks(int numOfBlocks, uint64_t blockSize)
+{
+	int8_t * clean_this_block = malloc(blockSize);
+
+	for (int i = 0; i < numOfBlocks; i++)
+	{
+		LBAread(clean_this_block, 1, i);
+		for (int j = 0; j < blockSize; j++)
+		{
+			clean_this_block[j] = 0;
+		}
+		LBAwrite(clean_this_block, 1, i);
+	}
+
+}
+
 void init_bitmap(int numOfBlocks, uint64_t blockSize)
 {
 
 	int first_free_block = 0;
-	
-	//creating buffer to read if a block is empty or not
-	dir_entr * buffer_block = malloc(blockSize);
 
 	// creating bitmap for free space
 	if (buffer_bitmap == NULL)
 	{
 		buffer_bitmap = malloc(sizeof(buffer_bitmap) * numOfBlocks);
 	}
-	
 
 	//initializing dedicated block space for VCB and freespace bitmap
-	for (int i = 0; i <= 5 + 1; i++)
+	for (int i = 0; i < 6; i++)
 	{
-		/*
-		 WARNING: will probably have to call a move() function for 
-		 file/directory if they are occupying block space for the 
-		 freespace bitmap
-		 */
-
 		buffer_bitmap[i] = 1;
-	}
-	
-	/*
-	iterating through bitmap and starting after the dedicate space 
-	for vcb and freespace bitmap (e.g 1 block for + 5 blocks for freespace)
-	*/
-
-	for (int i = 6; i < numOfBlocks; i++)
-	{
-		LBAread(buffer_block, 1, i);
-
-		// checking if block is empty, and updating bitmap
-		if (buffer_block->occupied != 1)
-		{
-			buffer_bitmap[i] = 0;
-		}
-		else 
-		{
-			buffer_bitmap[i] = 1;
-		}
 	}
 
 	LBAwrite(buffer_bitmap, 5, 1);
@@ -215,89 +203,88 @@ void init_bitmap(int numOfBlocks, uint64_t blockSize)
 }
 
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
-	{
+{
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 	/* TODO: Add any code you need to initialize your file system. */
+
+	VCB = malloc(blockSize);
 	
-		VCB = malloc(blockSize);
-		
-		//VCB is updated with whatever is at position 0
-		LBAread(VCB, 1, 0);
+	//VCB is updated with whatever is at position 0
+	LBAread(VCB, 1, 0);
+
+	/*
+	checking if magic number of block 0 is 3.
+	if it is 3 then VCB is already formatted,
+	and we don't need to initialize.
+	*/
+
+	if (VCB->magic_num != 3)
+	{
+		flush_blocks(numberOfBlocks, blockSize);
+		VCB->magic_num = 3;
+		VCB->total_blocks = numberOfBlocks;
+		VCB->block_size = blockSize;
+
+		//init_bitmap() also returns the first free block in freespace bitmap
+		init_bitmap(numberOfBlocks, blockSize); 
+		update_free_block_start(blockSize);
+
+		// --------- INIT ROOT DIRECTORY ---------- //
 
 		/*
-	 	checking if magic number of block 0 is 3.
-	 	if it is 3 then VCB is already formatted,
-	 	and we don't need to initialize.
+		creating an array of 51 dir_entries
+		changed sizeof(dir_entr) -> sizeof(root_dir) * 5
+		since sizeof(dir_entr) was producing weird hexdump error
 		*/
 
-		if (VCB->magic_num != 3)
-		{
-			VCB->magic_num = 3;
-			VCB->total_blocks = numberOfBlocks;
-			VCB->block_size = blockSize;
-
-			//init_bitmap() also returns the first free block in freespace bitmap
-			init_bitmap(numberOfBlocks, blockSize); 
-			update_free_block_start(blockSize);
-
-			// --------- INIT ROOT DIRECTORY ---------- //
-
-			/*
-			 creating an array of 51 dir_entries
-			 changed sizeof(dir_entr) -> sizeof(root_dir) * 5
-			 since sizeof(dir_entr) was producing weird hexdump error
-			 */
-
-			dir_entr * root_dir = malloc(blockSize * 6); 
+		dir_entr * root_dir = malloc(blockSize * 6); 
 			
-			printf("Size of dir_entr: %ld \n", sizeof(dir_entr));
-			printf("blocks to allocate for root: %ld \n\n", 1 + (sizeof(dir_entr)* 59) / 512);
+		printf("Size of dir_entr: %ld \n", sizeof(dir_entr));
+		printf("blocks to allocate for root: %ld \n\n", (sizeof(dir_entr)* 64) / 512);
 
-			strncpy(root_dir[0].filename, ".", 1);
-			root_dir[0].size = sizeof(dir_entr) * 59;
+		strncpy(root_dir[0].filename, ".", 1);
+		root_dir[0].size = sizeof(dir_entr) * 64;
 
-			// VCB->free_block_start will always be up to date
-			root_dir[0].starting_block = VCB->free_block_start; 
-			strncpy(root_dir[1].filename, "..", 2);
+		// VCB->free_block_start will always be up to date
+		root_dir[0].starting_block = VCB->free_block_start; 
+		strncpy(root_dir[1].filename, "..", 2);
 
-			printf("Size of root_dir: %d \n", root_dir[0].size);
-			printf("root_dir[0].starting_block : %d \n", root_dir[0].starting_block);
-			printf("root_dir[0].filename : %s \n", root_dir[0].filename);
-			printf("root_dir[1].filename : %s \n\n", root_dir[1].filename);
+		printf("Size of root_dir: %d \n", root_dir[0].size);
+		printf("root_dir[0].starting_block : %d \n", root_dir[0].starting_block);
+		printf("root_dir[0].filename : %s \n", root_dir[0].filename);
+		printf("root_dir[1].filename : %s \n\n", root_dir[1].filename);
 
-			for (int i = 0; i < 59; i++)
-			{
-				// cannot set to null, so 0 will imply that this dir_entry is free
-				root_dir[i].next = 0;
-			}
-
-			//-------ALLOC SPACE FOR ROOT DIRECTORY-------//
-		
-			/*
-			 I want to allocate 6. VCB->free_block_start will
-			 be updated after calling allocate_space() so I will 
-			 retrieve the previous free_start
-			 */
-
-			int previous_free_block_start = allocate_space(5, numberOfBlocks); 
-		
-			for (int i = 0; i < 6; i++)
-			{
-				LBAwrite(root_dir, 6, previous_free_block_start);
-			}
-
-			// this is the starting block of the root directory
-			VCB->dir_entr_start = previous_free_block_start; 
-
-			LBAwrite(VCB, 1, 0);
+		for (int i = 0; i < 64; i++)
+		{
+			// cannot set to null, so 0 will imply that this dir_entry is free
+			root_dir[i].next = 0;
 		}
 
+		//-------ALLOC SPACE FOR ROOT DIRECTORY-------//
+	
+		/*
+		I want to allocate 6. VCB->free_block_start will
+		be updated after calling allocate_space() so I will 
+		retrieve the previous free_start
+		*/
 
-		return 0;
+		int previous_free_block_start = allocate_space(5, numberOfBlocks); 
+		
+		for (int i = 0; i < 6; i++)
+		{
+			LBAwrite(root_dir, 6, previous_free_block_start);
+		}
+
+		// this is the starting block of the root directory
+		VCB->dir_entr_start = previous_free_block_start; 
+
+		LBAwrite(VCB, 1, 0);
 	}
+		return 0;
+}
 	
 	
 void exitFileSystem ()
-	{
+{
 		printf ("System exiting\n");
-	}
+}
