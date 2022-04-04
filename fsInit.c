@@ -98,7 +98,7 @@ void update_free_block_start(int total_blocks)
 }
 
 //This function will allocate space by moving occupied blocks out of the way
-void allocate_space(int amount_to_alloc, int total_blocks)
+int allocate_space(int amount_to_alloc, int total_blocks)
 {
 	int previous_free_block_start = VCB->free_block_start;
 	int j = 0; // j is an index for alloc_block_array
@@ -154,6 +154,8 @@ void allocate_space(int amount_to_alloc, int total_blocks)
 
 	// updates VCB with new first free block position.
 	update_free_block_start(total_blocks);
+
+	return previous_free_block_start;
 }
 
 /*
@@ -244,8 +246,14 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		strncpy(root_dir[0].filename, ".", 1);
 		root_dir[0].size = sizeof(dir_entr) * 64;
 
-		// VCB->free_block_start will always be up to date
-		root_dir[0].starting_block = VCB->free_block_start; 
+		/*
+		I want to allocate 6 blocks for the root. allocate_space() 
+		will return the starting block in the freespace bitmap.
+		VCB->dir_entr_start will represent the starting block of
+		the root directory.
+		*/
+
+		VCB->dir_entr_start = root_dir[0].starting_block = allocate_space(5, numberOfBlocks);
 		strncpy(root_dir[1].filename, "..", 2);
 
 		printf("Size of root_dir: %d \n", root_dir[0].size);
@@ -259,23 +267,13 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			strncpy(root_dir[i].filename, "", 0);
 		}
 
-		//-------ALLOC SPACE FOR ROOT DIRECTORY-------//
-	
-		/*
-		I want to allocate 6. VCB->free_block_start will
-		be updated after calling allocate_space() so I will 
-		retrieve the previous free_start
-		*/
 
-		allocate_space(5, numberOfBlocks); 
+		//-------ALLOC SPACE FOR ROOT DIRECTORY-------//
 		
 		for (int i = 0; i < 6; i++)
 		{
 			LBAwrite(root_dir, 6, root_dir[0].starting_block);
 		}
-
-		// the starting block of the root directory is recorded into VCB
-		VCB->dir_entr_start = root_dir[0].starting_block; 
 
 		LBAwrite(VCB, 1, 0);
 
