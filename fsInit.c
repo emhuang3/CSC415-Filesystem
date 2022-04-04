@@ -87,6 +87,8 @@ void update_free_block_start(int total_blocks)
 		{
 			VCB->free_block_start = i;
 			// printf("updated free_space_start: %d \n\n", VCB->free_block_start);
+			
+			LBAwrite(VCB, 1, 0);
 			break;
 		}
 	}
@@ -216,7 +218,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	if (VCB->magic_num != 3)
 	{
-		flush_blocks(numberOfBlocks, blockSize);
+		// flush_blocks(numberOfBlocks, blockSize);
 		VCB->magic_num = 3;
 		VCB->total_blocks = numberOfBlocks;
 		VCB->block_size = blockSize;
