@@ -166,18 +166,17 @@ This is done to produce nice looking hexdumps.
 
 void flush_blocks(int numOfBlocks, uint64_t blockSize)
 {
-	int8_t * clean_this_block = malloc(blockSize);
+	uint64_t * clean_this_block = malloc(blockSize);
 
 	for (int i = 0; i < numOfBlocks; i++)
 	{
 		LBAread(clean_this_block, 1, i);
-		for (int j = 0; j < blockSize; j++)
+		for (int j = 0; j < blockSize / 8; j++)
 		{
 			clean_this_block[j] = 0;
 		}
 		LBAwrite(clean_this_block, 1, i);
 	}
-
 }
 
 void init_bitmap(int numOfBlocks, uint64_t blockSize)
@@ -256,8 +255,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		for (int i = 0; i < 64; i++)
 		{
-			// cannot set to null, so 0 will imply that this dir_entry is free
-			root_dir[i].next = 0;
+			// empty filename will imply that it is free to write to
+			strncpy(root_dir[i].filename, "", 0);
 		}
 
 		//-------ALLOC SPACE FOR ROOT DIRECTORY-------//
