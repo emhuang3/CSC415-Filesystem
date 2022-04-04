@@ -241,8 +241,13 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		// printf("blocks to allocate for root: %ld \n\n", (sizeof(dir_entr)* 64) / 512);
 
 		strncpy(root_dir[0].filename, ".", 1);
-		root_dir[0].size = sizeof(dir_entr) * 64;
-		root_dir[0].permissions = 700;
+		strncpy(root_dir[1].filename, "..", 2);
+
+		root_dir[0].size = root_dir[1].size = sizeof(dir_entr) * 64;
+
+		root_dir[0].permissions = root_dir[1].permissions = 700;
+
+		root_dir[0].is_file = root_dir[1].is_file = 0;
 
 		/*
 		I want to allocate 6 blocks for the root. allocate_space() 
@@ -252,7 +257,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		*/
 
 		VCB->dir_entr_start = root_dir[0].starting_block = allocate_space(5, numberOfBlocks);
-		strncpy(root_dir[1].filename, "..", 2);
+		
+		root_dir[1].starting_block = root_dir[0].starting_block;
+		
 
 		// printf("Size of root_dir: %d \n", root_dir[0].size);
 		// printf("root_dir[0].starting_block : %d \n", root_dir[0].starting_block);
