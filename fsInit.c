@@ -76,9 +76,8 @@ void update_free_block_start(int total_blocks)
 	if (buffer_bitmap == NULL)
 	{
 		buffer_bitmap = malloc(sizeof(buffer_bitmap) * total_blocks);
+		LBAread(buffer_bitmap, 5, 1);
 	}
-	
-	LBAread(buffer_bitmap, 5, 1);
 
 	//finding the first free block in the freespace bitmap
 	for (int i = 0; i < total_blocks; i++)
@@ -104,9 +103,8 @@ int allocate_space(int amount_to_alloc, int total_blocks)
 	if (buffer_bitmap == NULL)
 	{
 		buffer_bitmap = malloc(sizeof(buffer_bitmap) * total_blocks);
+		LBAread(buffer_bitmap, 5, 1); // blocks 1 -> 5 represent our freespace bitmap
 	}
-
-	LBAread(buffer_bitmap, 5, 1); // blocks 1 -> 5 represent our freespace bitmap
 
 	/*
 	this iterates through the buffer_bitmap to see if block is free or occupied.
@@ -183,7 +181,7 @@ void init_bitmap(int numOfBlocks, uint64_t blockSize)
 
 	int first_free_block = 0;
 
-	// creating bitmap for free space
+	// creating bitmap for free space for the first time
 	if (buffer_bitmap == NULL)
 	{
 		buffer_bitmap = malloc(sizeof(buffer_bitmap) * numOfBlocks);
@@ -284,12 +282,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		free(VCB);
 		VCB = NULL;
-
-		if (buffer_bitmap != NULL)
-		{
-			free(buffer_bitmap);
-			buffer_bitmap = NULL;
-		}
 		
 		return 0;
 }
@@ -297,5 +289,11 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 void exitFileSystem ()
 {
-		printf ("System exiting\n");
+	if (buffer_bitmap != NULL)
+	{
+		free(buffer_bitmap);
+		buffer_bitmap = NULL;
+	}
+	
+	printf ("System exiting\n");
 }
