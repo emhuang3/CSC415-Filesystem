@@ -102,8 +102,7 @@ void update_free_block_start(int total_blocks)
 	}
 }
 
-//This function will retrun an array of free positions to the caller
-
+//This function will allocate space by moving occupied blocks out of the way
 int allocate_space(int amount_to_alloc, int total_blocks)
 {
 	int previous_free_block_start = VCB->free_block_start;
@@ -118,10 +117,8 @@ int allocate_space(int amount_to_alloc, int total_blocks)
 	LBAread(buffer_bitmap, 5, 1); // blocks 1 -> 5 represent our freespace bitmap
 
 	/*
-	this iterates through the buffer_bitmap and populates alloc_block_array
-	with the position of free blocks to return to caller. caller could use this
-	array of free positions to populate blocks using something like  
-	LBAwrite(FILE, 1, alloc_block_array[i]) inside a loop.
+	this iterates through the buffer_bitmap to see if block is free or occupied.
+	If it is occupued, move() will move the contents of the block somewhere else.
 	*/
 
 	printf("These positions are given to caller and written to disk: \n");
@@ -234,9 +231,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	 	and we don't need to initialize.
 		*/
 
-		if (VCB->magic_num != 1)
+		if (VCB->magic_num != 3)
 		{
-			VCB->magic_num = 1;
+			VCB->magic_num = 3;
 			VCB->total_blocks = numberOfBlocks;
 			VCB->block_size = blockSize;
 
