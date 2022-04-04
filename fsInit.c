@@ -169,19 +169,6 @@ int allocate_space(int amount_to_alloc, int total_blocks)
 void init_bitmap(int numOfBlocks, uint64_t blockSize)
 {
 
-	/*
-	 Testing that blocks are being read properly 
-	 by adding a temporary directory to block 10, to 
-	 see if it shows up in hexdump.
-	 */
-	dir_entr * test_dir = malloc(blockSize);
-	test_dir->occupied = 1;
-	LBAwrite(test_dir, 1, 10);
-
-	/*-----------------END TEST----------------*/
-
-
-
 	int first_free_block = 0;
 	
 	//creating buffer to read if a block is empty or not
@@ -247,29 +234,30 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	 	and we don't need to initialize.
 		*/
 
-		if (VCB->magic_num != 2)
+		if (VCB->magic_num != 1)
 		{
-			VCB->magic_num = 2;
+			VCB->magic_num = 1;
 			VCB->total_blocks = numberOfBlocks;
 			VCB->block_size = blockSize;
 
 			//init_bitmap() also returns the first free block in freespace bitmap
 			init_bitmap(numberOfBlocks, blockSize); 
 			update_free_block_start(blockSize);
-			VCB->dir_entr_start = 6;  // this might be where the root directory is positioned.
-			//VCB->fat_start;		  // this is where the fat is positioned.
 
 			LBAwrite(VCB, 1, 0);
 
-
 			// --------- INIT ROOT DIRECTORY ---------- //
 
-			// creating an array of 51 dir_entries
-			dir_entr * root_dir = malloc(sizeof(dir_entr) * 76); 
+			/*
+			 creating an array of 51 dir_entries
+			 changed sizeof(dir_entr) -> sizeof(root_dir) * 5
+			 since sizeof(dir_entr) was producing weird hexdump error
+			 */
 
+			dir_entr * root_dir = malloc(sizeof(dir_entr) * 76); 
 			
 			printf("Size of dir_entr: %ld \n", sizeof(dir_entr));
-			printf("blocks to allocate for root: %ld \n\n", 1 + (sizeof(dir_entr) * 76) / 512);
+			printf("blocks to allocate for root: %ld \n\n", 1 + (sizeof(dir_entr)* 76) / 512);
 
 			root_dir[0].filename = ".";
 			root_dir[0].size = sizeof(dir_entr) * 76;
@@ -283,9 +271,10 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			printf("root_dir[0].filename : %s \n", root_dir[0].filename);
 			printf("root_dir[1].filename : %s \n\n", root_dir[1].filename);
 
-			for (int i = 0; i < 57; i++)
+			for (int i = 0; i < 76; i++)
 			{
-				root_dir[i].next = NULL;
+				// cannot set to null, so 0 will imply that this dir_entry is free
+				root_dir[i].next = 0;
 			}
 
 			//-------ALLOC SPACE FOR ROOT DIRECTORY-------//
@@ -303,8 +292,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 				LBAwrite(root_dir, 6, previous_free_block_start);
 			}
 
-			//hexdump for freespace should update to reflect occupied
-
+			// this is the starting block of the root directory
+			VCB->dir_entr_start = previous_free_block_start; 
 		}
 
 
