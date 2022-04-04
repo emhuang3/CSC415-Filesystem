@@ -1,9 +1,15 @@
 /**************************************************************
-* Class:  CSC-415-0# Fall 2021
-* Names: 
-* Student IDs:
-* GitHub Name:
-* Group Name:
+* Class:  CSC-415-03 Fall 2021
+* 
+* Names: Kilian Kistenbroker, Emily Huang, Sean Locklar, 
+* Shauhin Pourshayegan
+*
+* Student IDs: 920723372, 920499746, 920506337, 920447681
+* 
+* GitHub Name: KilianKistenbroker
+* 
+* Group Name: Team Poke
+* 
 * Project: Basic File System
 *
 * File: fsInit.c
@@ -30,12 +36,8 @@ typedef struct vcb
 {
 	int block_size;
 	int total_blocks;
-	// int total_free_blocks;
-	// int fat_start;
-	// int fat_len;
 	int free_block_start;
 	int dir_entr_start;
-	// int dir_entr_len;
 	int magic_num;
 } vcb;
 
@@ -44,11 +46,12 @@ vcb * VCB;
 
 typedef struct dir_entr
 {
+
 	int starting_block;
 	int size;
 
 	// used tell if this is a file or directory
-	int file_type;
+	int is_file;
 
 	// points to the next file. if null then it is free
 	int next; 
@@ -59,14 +62,6 @@ typedef struct dir_entr
 	gid_t group_ID;
 
 } dir_entr;
-
-//probably don't need this for now
-typedef struct fat
-{
-	int occupied;
-	int eof;
-	int next_block;
-} fat;
 
 uint8_t * buffer_bitmap;
 
@@ -91,7 +86,7 @@ void update_free_block_start(int total_blocks)
 		if (buffer_bitmap[i] == 0)
 		{
 			VCB->free_block_start = i;
-			printf("updated free_space_start: %d \n\n", VCB->free_block_start);
+			// printf("updated free_space_start: %d \n\n", VCB->free_block_start);
 			break;
 		}
 	}
@@ -126,13 +121,13 @@ int allocate_space(int amount_to_alloc, int total_blocks)
 			// block is free. Nothing to move
 			if (buffer_bitmap[i] == 0)
 			{
-				printf("block %d freely written to \n", i);
+				// printf("block %d freely written to \n", i);
 				buffer_bitmap[i] = 1;
 				j++;
 			}
 			else
 			{
-				printf("block %d was moved then written to \n", i);
+				// printf("block %d was moved then written to \n", i);
 				//run a move() function to move stuff in block somewhere else.
 				buffer_bitmap[i] = 1;
 				j++;
@@ -144,7 +139,7 @@ int allocate_space(int amount_to_alloc, int total_blocks)
 		}
 		else if (i == total_blocks - 1) // implies their is no free space left.
 		{
-			printf("no more space available\n");
+			// printf("no more space available\n");
 		}
 	}
 	printf("\n");
@@ -163,23 +158,23 @@ This function is used for cleaning the blocks.
 This is done to produce nice looking hexdumps.
 */
 
-void flush_blocks(int numOfBlocks, uint64_t blockSize)
-{
-	uint64_t * clean_this_block = malloc(blockSize);
+// void flush_blocks(int numOfBlocks, uint64_t blockSize)
+// {
+// 	uint64_t * clean_this_block = malloc(blockSize);
 
-	for (int i = 0; i < numOfBlocks; i++)
-	{
-		LBAread(clean_this_block, 1, i);
-		for (int j = 0; j < blockSize / 8; j++)
-		{
-			clean_this_block[j] = 0;
-		}
-		LBAwrite(clean_this_block, 1, i);
-	}
+// 	for (int i = 0; i < numOfBlocks; i++)
+// 	{
+// 		LBAread(clean_this_block, 1, i);
+// 		for (int j = 0; j < blockSize / 8; j++)
+// 		{
+// 			clean_this_block[j] = 0;
+// 		}
+// 		LBAwrite(clean_this_block, 1, i);
+// 	}
 
-	free(clean_this_block);
-	clean_this_block = NULL;
-}
+// 	free(clean_this_block);
+// 	clean_this_block = NULL;
+// }
 
 void init_bitmap(int numOfBlocks, uint64_t blockSize)
 {
@@ -240,8 +235,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		dir_entr * root_dir = malloc(blockSize * 6); 
 			
-		printf("Size of dir_entr: %ld \n", sizeof(dir_entr));
-		printf("blocks to allocate for root: %ld \n\n", (sizeof(dir_entr)* 64) / 512);
+		// printf("Size of dir_entr: %ld \n", sizeof(dir_entr));
+		// printf("blocks to allocate for root: %ld \n\n", (sizeof(dir_entr)* 64) / 512);
 
 		strncpy(root_dir[0].filename, ".", 1);
 		root_dir[0].size = sizeof(dir_entr) * 64;
@@ -256,19 +251,16 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		VCB->dir_entr_start = root_dir[0].starting_block = allocate_space(5, numberOfBlocks);
 		strncpy(root_dir[1].filename, "..", 2);
 
-		printf("Size of root_dir: %d \n", root_dir[0].size);
-		printf("root_dir[0].starting_block : %d \n", root_dir[0].starting_block);
-		printf("root_dir[0].filename : %s \n", root_dir[0].filename);
-		printf("root_dir[1].filename : %s \n\n", root_dir[1].filename);
+		// printf("Size of root_dir: %d \n", root_dir[0].size);
+		// printf("root_dir[0].starting_block : %d \n", root_dir[0].starting_block);
+		// printf("root_dir[0].filename : %s \n", root_dir[0].filename);
+		// printf("root_dir[1].filename : %s \n\n", root_dir[1].filename);
 
 		for (int i = 0; i < 64; i++)
 		{
 			// empty filename will imply that it is free to write to
 			strncpy(root_dir[i].filename, "", 0);
 		}
-
-
-		//-------ALLOC SPACE FOR ROOT DIRECTORY-------//
 		
 		for (int i = 0; i < 6; i++)
 		{
