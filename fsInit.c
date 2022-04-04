@@ -70,7 +70,6 @@ typedef struct fat
 
 uint8_t * buffer_bitmap;
 
-
 void update_free_block_start(int total_blocks) 
 {
 
@@ -99,7 +98,7 @@ void update_free_block_start(int total_blocks)
 }
 
 //This function will allocate space by moving occupied blocks out of the way
-int allocate_space(int amount_to_alloc, int total_blocks)
+void allocate_space(int amount_to_alloc, int total_blocks)
 {
 	int previous_free_block_start = VCB->free_block_start;
 	int j = 0; // j is an index for alloc_block_array
@@ -155,8 +154,6 @@ int allocate_space(int amount_to_alloc, int total_blocks)
 
 	// updates VCB with new first free block position.
 	update_free_block_start(total_blocks);
-
-	return previous_free_block_start;
 }
 
 /*
@@ -270,19 +267,19 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		retrieve the previous free_start
 		*/
 
-		int previous_free_block_start = allocate_space(5, numberOfBlocks); 
+		allocate_space(5, numberOfBlocks); 
 		
 		for (int i = 0; i < 6; i++)
 		{
-			LBAwrite(root_dir, 6, previous_free_block_start);
+			LBAwrite(root_dir, 6, root_dir[0].starting_block);
 		}
 
-		// this is the starting block of the root directory
-		VCB->dir_entr_start = previous_free_block_start; 
+		// the starting block of the root directory is recorded into VCB
+		VCB->dir_entr_start = root_dir[0].starting_block; 
 
 		LBAwrite(VCB, 1, 0);
 
-		//---------- cleaning up malloc's spaces ---------- //
+		//---------- cleaning up malloc'd spaces ---------- //
 
 		free(root_dir);
 		root_dir = NULL;
