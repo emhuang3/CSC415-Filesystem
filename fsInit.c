@@ -254,7 +254,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			 since sizeof(dir_entr) was producing weird hexdump error
 			 */
 
-			dir_entr * root_dir = malloc(sizeof(dir_entr) * 76); 
+			dir_entr * root_dir = malloc(blockSize * 6); 
 			
 			printf("Size of dir_entr: %ld \n", sizeof(dir_entr));
 			printf("blocks to allocate for root: %ld \n\n", 1 + (sizeof(dir_entr)* 76) / 512);
