@@ -96,8 +96,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		vcb_buffer->block_size = blockSize;
 		vcb_buffer->total_blocks = numberOfBlocks;
 		vcb_buffer->total_free_blocks = 8;	//8 is random value for testing
-		vcb_buffer->fat_start = 1;
-		vcb_buffer->fat_len = 6;	//6 is random value for testing
+		//vcb_buffer->fat_start = 1;
+		//vcb_buffer->fat_len = 6;	//6 is random value for testing
 		vcb_buffer->free_block_start = 9;	//9 is random value for testing
 		vcb_buffer->dir_entr_start = 1;
 		vcb_buffer->dir_entr_len = 50;
