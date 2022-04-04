@@ -258,7 +258,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		// printf("root_dir[0].filename : %s \n", root_dir[0].filename);
 		// printf("root_dir[1].filename : %s \n\n", root_dir[1].filename);
 
-		for (int i = 0; i < 64; i++)
+		for (int i = 2; i < 64; i++)
 		{
 			// empty filename will imply that it is free to write to
 			strncpy(root_dir[i].filename, "", 0);
