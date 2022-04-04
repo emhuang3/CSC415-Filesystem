@@ -58,7 +58,7 @@ typedef struct dir_entr
 	int next; 
 
 	int permissions;
-	char * filename;
+	char filename[20];
 	uid_t user_ID;
 	gid_t group_ID;
 
@@ -231,9 +231,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	 	and we don't need to initialize.
 		*/
 
-		if (VCB->magic_num != 3)
+		if (VCB->magic_num != 2)
 		{
-			VCB->magic_num = 3;
+			VCB->magic_num = 2;
 			VCB->total_blocks = numberOfBlocks;
 			VCB->block_size = blockSize;
 
@@ -254,21 +254,21 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			dir_entr * root_dir = malloc(blockSize * 6); 
 			
 			printf("Size of dir_entr: %ld \n", sizeof(dir_entr));
-			printf("blocks to allocate for root: %ld \n\n", 1 + (sizeof(dir_entr)* 76) / 512);
+			printf("blocks to allocate for root: %ld \n\n", 1 + (sizeof(dir_entr)* 59) / 512);
 
-			root_dir[0].filename = ".";
-			root_dir[0].size = sizeof(dir_entr) * 76;
+			strncpy(root_dir[0].filename, ".", 1);
+			root_dir[0].size = sizeof(dir_entr) * 59;
 
 			// VCB->free_block_start will always be up to date
 			root_dir[0].starting_block = VCB->free_block_start; 
-			root_dir[1].filename = "..";
+			strncpy(root_dir[1].filename, "..", 2);
 
 			printf("Size of root_dir: %d \n", root_dir[0].size);
 			printf("root_dir[0].starting_block : %d \n", root_dir[0].starting_block);
 			printf("root_dir[0].filename : %s \n", root_dir[0].filename);
 			printf("root_dir[1].filename : %s \n\n", root_dir[1].filename);
 
-			for (int i = 0; i < 76; i++)
+			for (int i = 0; i < 59; i++)
 			{
 				// cannot set to null, so 0 will imply that this dir_entry is free
 				root_dir[i].next = 0;
