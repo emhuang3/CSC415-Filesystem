@@ -177,6 +177,9 @@ void flush_blocks(int numOfBlocks, uint64_t blockSize)
 		}
 		LBAwrite(clean_this_block, 1, i);
 	}
+
+	free(clean_this_block);
+	clean_this_block = NULL;
 }
 
 void init_bitmap(int numOfBlocks, uint64_t blockSize)
@@ -278,7 +281,22 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		VCB->dir_entr_start = previous_free_block_start; 
 
 		LBAwrite(VCB, 1, 0);
+
+		//---------- cleaning up malloc's spaces ---------- //
+
+		free(root_dir);
+		root_dir = NULL;
 	}
+
+		free(VCB);
+		VCB = NULL;
+
+		if (buffer_bitmap != NULL)
+		{
+			free(buffer_bitmap);
+			buffer_bitmap = NULL;
+		}
+		
 		return 0;
 }
 	
