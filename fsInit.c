@@ -87,6 +87,8 @@ void update_free_block_start(int total_blocks)
 		{
 			VCB->free_block_start = i;
 			// printf("updated free_space_start: %d \n\n", VCB->free_block_start);
+			
+			// LBAwrite(VCB, 1, 0);
 			break;
 		}
 	}
