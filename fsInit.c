@@ -30,14 +30,13 @@ typedef struct vcb
 {
 	int block_size;
 	int total_blocks;
-	int total_free_blocks;
-	int fat_start;
-	int fat_len;
+	// int total_free_blocks;
+	// int fat_start;
+	// int fat_len;
 	int free_block_start;
 	int dir_entr_start;
-	int dir_entr_len;
+	// int dir_entr_len;
 	int magic_num;
-
 } vcb;
 
 // VCB is declared globally here
@@ -231,17 +230,15 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	 	and we don't need to initialize.
 		*/
 
-		if (VCB->magic_num != 2)
+		if (VCB->magic_num != 3)
 		{
-			VCB->magic_num = 2;
+			VCB->magic_num = 3;
 			VCB->total_blocks = numberOfBlocks;
 			VCB->block_size = blockSize;
 
 			//init_bitmap() also returns the first free block in freespace bitmap
 			init_bitmap(numberOfBlocks, blockSize); 
 			update_free_block_start(blockSize);
-
-			LBAwrite(VCB, 1, 0);
 
 			// --------- INIT ROOT DIRECTORY ---------- //
 
@@ -291,6 +288,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 			// this is the starting block of the root directory
 			VCB->dir_entr_start = previous_free_block_start; 
+
+			LBAwrite(VCB, 1, 0);
 		}
 
 
