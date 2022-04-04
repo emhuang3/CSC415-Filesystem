@@ -1,9 +1,10 @@
 /**************************************************************
-* Class:  CSC-415-0# Fall 2021
-* Names: 
-* Student IDs:
-* GitHub Name:
-* Group Name:
+* Class:  CSC-415-02/03 Fall 2021
+* Names: Kilian Kistenbroker, Emily Huang, Sean Locklar, 
+	Shauhin Pourshayegan
+* Student IDs: , 920499746, 920506337, 920447681
+* GitHub Name: KilianKistenbroker
+* Group Name: Team Poke
 * Project: Basic File System
 *
 * File: fsInit.c
@@ -26,7 +27,6 @@
 
 #include <math.h>
 
-#define NUM_Of_DIR_ENTR = 58;
 
 typedef struct vcb{
 	int block_size; 	//1
@@ -41,6 +41,7 @@ typedef struct vcb{
 }vcb;
 
 typedef struct dir_entr{
+	int next;
 	int start_block;
 	int size;
 	int file_type;
@@ -52,19 +53,35 @@ typedef struct dir_entr{
 
 vcb * vcb_buffer;
 
+
 int freeSpaceStart(u_int8_t * free_space, int blocks){
-	free_space = realloc(free_space,sizeof(free_space) + (sizeof(free_space) * blocks));
-	int i =0;
+	//free_space[10] =1;
+	//free_space[7] =1;
+	//printf("%ld", sizeof(free_space));
+	//free_space = realloc(free_space,sizeof(free_space) + (sizeof(free_space) * blocks));
+	int i = 0;
+	//just finds first space that's empty
 	while(free_space[i]!=0){
 		i++;
 	}
-	int free_space_start = i;
-	for(int j = i; j<i+blocks;j++){
-		free_space[j] = 1;
-		LBAwrite(free_space,  5, 1);
+	int free_space_start = i;	
+
+	int end = i+blocks;
+	for(int j = i; j<end;j++){
+		if(free_space[j]==0){
+			free_space[j] = 1;
+		}
+		else{
+			end = end + 1;
+			//printf("already occupied");
+		}
+		
+		LBAwrite(free_space,  blocks, 1);
 	}
+	vcb_buffer->free_block_start = free_space_start;
+	LBAwrite(vcb_buffer, 1, 0);
 	
-	return free_space_start;	
+	return free_space_start;
 }
 
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
@@ -72,7 +89,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 	/* TODO: Add any code you need to initialize your file system. */
 	vcb_buffer = malloc(blockSize);	//default blockSize is 512
-	LBAread(vcb_buffer, 1, 0);	//
+	LBAread(vcb_buffer, 1, 0);	
 	
 	if(vcb_buffer->magic_num != 3){
 		vcb_buffer->block_size = blockSize;
@@ -109,8 +126,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	//mark the first 6 bits as used
 	for(int i = 0; i<6; i++){
 		free_space[i] = 1;
-		LBAwrite(free_space, 5, 1);
+		
 	}
+	LBAwrite(free_space, 5, 1);
 	
 	//write to vcb where free blocks start
 	vcb_buffer->free_block_start = 1;
@@ -120,29 +138,30 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 	
 	/*Lets say we want 50 direcotry entries. The size of a single 
-	directory entry is 44. So we need enough blocks to fit 
-	50*44 = 2200 bytes. For this we need at least 5 blocks.
+	directory entry is 48. So we need enough blocks to fit 
+	50*48 = 2400 bytes. For this we need at least 5 blocks.
 	But 5 blocks mean 5*512 = 2560 bytes, meaning we have 
 	room for for 8 more directory entries. So now we want 
-	58 directory entries. This will be defined up top*/
+	53 directory entries. This will be defined up top*/
 	
 	dir_entr * dir_entr_array = malloc(5*blockSize);
-	for(int i =0; i<58;i++){
+	for(int i =0; i<53;i++){
 		//Initialize each directory structure to be in a free state?
+		dir_entr_array[i].next = 0;
 		
 	}
 	/*call freeSpaceStart to find the next free space to be the
 	starting block for the next directory entry*/
 	int dir_entr_starting_block = freeSpaceStart(free_space, 5);
+	LBAread(dir_entr_array, 5,dir_entr_starting_block);
 	
 
-	LBAread(dir_entr_array, 5,dir_entr_starting_block);
-
 	//set values for directory entry 0
+	dir_entr_array[0].next = 1;
 	dir_entr_array[0].start_block = dir_entr_starting_block;
-	/*2552 because that's the max number of files that
+	/*2544 because that's the max number of files that
 	can fit into the 5 allocated blocks(2560)*/
-	dir_entr_array[0].size = 2552;
+	dir_entr_array[0].size = 2544;
 	dir_entr_array[0].file_type = 1;
 	//only user will have read, write,execute permissions
 	dir_entr_array[0].persmissions = 700;
@@ -153,10 +172,11 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	dir_entr_array[0].group_ID = 0;
 
 	//set values for directory entry 1;
+	dir_entr_array[1].next = 1;
 	dir_entr_array[1].start_block = dir_entr_starting_block;
-	/*2552 because that's the max number of files that
+	/*2544 because that's the max number of files that
 	can fit into the 5 allocated blocks(2560)*/
-	dir_entr_array[1].size = 2552;
+	dir_entr_array[1].size = 2544;
 	dir_entr_array[1].file_type = 1;
 	//only user will have read, write,execute permissions
 	dir_entr_array[1].persmissions = 700;
