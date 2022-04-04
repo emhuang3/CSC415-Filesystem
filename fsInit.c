@@ -242,6 +242,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		strncpy(root_dir[0].filename, ".", 1);
 		root_dir[0].size = sizeof(dir_entr) * 64;
+		root_dir[0].permissions = 700;
 
 		/*
 		I want to allocate 6 blocks for the root. allocate_space() 
@@ -263,11 +264,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			// empty filename will imply that it is free to write to
 			strncpy(root_dir[i].filename, "", 0);
 		}
-		
-		for (int i = 0; i < 6; i++)
-		{
-			LBAwrite(root_dir, 6, root_dir[0].starting_block);
-		}
+
+		LBAwrite(root_dir, 6, root_dir[0].starting_block);
 
 		LBAwrite(VCB, 1, 0);
 
