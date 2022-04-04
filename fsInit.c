@@ -62,6 +62,7 @@ int freeSpaceStart(u_int8_t * free_space, int blocks){
 	int i = 0;
 	//just finds first space that's empty
 	while(free_space[i]!=0){
+		//printf("%d", i);
 		i++;
 	}
 	int free_space_start = i;	
@@ -191,7 +192,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	vcb_buffer->dir_entr_start = dir_entr_starting_block;
 	LBAwrite(vcb_buffer, 1, 0);
 
-
+	//printf("Free Block starts at: %d", vcb_buffer->free_block_start);
 	return 0;
 	}
 	
