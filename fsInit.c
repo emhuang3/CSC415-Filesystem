@@ -177,13 +177,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 	
 void exitFileSystem ()
-<<<<<<< HEAD
-	{
-	printf ("System exiting\n");
-	}
-
-	
-=======
 {
 	if (buffer_bitmap != NULL)
 	{
@@ -193,4 +186,3 @@ void exitFileSystem ()
 	
 	printf ("System exiting\n");
 }
->>>>>>> b3caf003ce60ccfdcad53419d8e5c6249e22cecd
