@@ -1,9 +1,15 @@
 /**************************************************************
-* Class:  CSC-415-0# Fall 2021
-* Names: 
-* Student IDs:
-* GitHub Name:
-* Group Name:
+* Class:  CSC-415-03 Fall 2021
+* 
+* Names: Kilian Kistenbroker, Emily Huang, Sean Locklar, 
+* Shauhin Pourshayegan
+*
+* Student IDs: 920723372, 920499746, 920506337, 920447681
+* 
+* GitHub Name: KilianKistenbroker
+* 
+* Group Name: Team Poke
+*
 * Project: Basic File System
 *
 * File: b_io.c
@@ -53,7 +59,7 @@ b_io_fd b_getFCB ()
 	{
 	for (int i = 0; i < MAXFCBS; i++)
 		{
-		if (fcbArray[i].buff == NULL)
+		if (fcbArray[i].buf == NULL)
 			{
 			return i;		//Not thread safe (But do not worry about it for this assignment)
 			}

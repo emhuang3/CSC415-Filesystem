@@ -1,10 +1,15 @@
 /**************************************************************
-* Class:  CSC-415-02/03 Fall 2021
+* Class:  CSC-415-03 Fall 2021
+* 
 * Names: Kilian Kistenbroker, Emily Huang, Sean Locklar, 
-	Shauhin Pourshayegan
-* Student IDs: , 920499746, 920506337, 920447681
+* Shauhin Pourshayegan
+*
+* Student IDs: 920723372, 920499746, 920506337, 920447681
+* 
 * GitHub Name: KilianKistenbroker
+* 
 * Group Name: Team Poke
+* 
 * Project: Basic File System
 *
 * File: fsInit.c
@@ -21,90 +26,200 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
+#include <stdint.h>
 
 #include "fsLow.h"
 #include "mfs.h"
 
-#include <math.h>
+typedef struct vcb
+{
+	int block_size;
+	int total_blocks;
+	int free_block_start;
+	int dir_entr_start;
+	int magic_num;
+} vcb;
 
+// VCB is declared globally here
+vcb * VCB;
 
-typedef struct vcb{
-	int block_size; 	//1
-	int total_blocks;	//2
-	int total_free_blocks;	//3
-	int fat_start;	//4	
-	int fat_len;	//5
-	int free_block_start;	//6
-	int dir_entr_start;	//7
-	int dir_entr_len;	//8
-	int magic_num;	//9
-}vcb;
+typedef struct dir_entr
+{
 
-typedef struct dir_entr{
-	int next;
-	int start_block;
+	int starting_block;
 	int size;
-	int file_type;
-	int persmissions;
+
+	// used tell if this is a file or directory
+	int is_file;
+
+	// points to the next file. if null then it is free
+	int next; 
+
+	int permissions;
 	char filename[20];
 	uid_t user_ID;
 	gid_t group_ID;
-}dir_entr;
 
-vcb * vcb_buffer;
+} dir_entr;
 
+uint8_t * buffer_bitmap;
 
-int freeSpaceStart(u_int8_t * free_space, int blocks){
-	//free_space[10] =1;
-	//free_space[7] =1;
-	//printf("%ld", sizeof(free_space));
-	//free_space = realloc(free_space,sizeof(free_space) + (sizeof(free_space) * blocks));
-	int i = 0;
-	//just finds first space that's empty
-	while(free_space[i]!=0){
-		//printf("%d", i);
-		i++;
+void update_free_block_start(int total_blocks) 
+{
+
+	/*
+	 reading free space into buffer from disk, 
+	 that way I can iterate through the freespace bitmap
+	 */
+
+	if (buffer_bitmap == NULL)
+	{
+		buffer_bitmap = malloc(sizeof(buffer_bitmap) * total_blocks);
 	}
-	int free_space_start = i;	
-
-	int end = i+blocks;
-	for(int j = i; j<end;j++){
-		if(free_space[j]==0){
-			free_space[j] = 1;
-		}
-		else{
-			end = end + 1;
-			//printf("already occupied");
-		}
-		
-		LBAwrite(free_space,  blocks, 1);
-	}
-	vcb_buffer->free_block_start = free_space_start;
-	LBAwrite(vcb_buffer, 1, 0);
 	
-	return free_space_start;
+	LBAread(buffer_bitmap, 5, 1);
+
+	//finding the first free block in the freespace bitmap
+	for (int i = 0; i < total_blocks; i++)
+	{
+		if (buffer_bitmap[i] == 0)
+		{
+			VCB->free_block_start = i;
+			// printf("updated free_space_start: %d \n\n", VCB->free_block_start);
+			
+			LBAwrite(VCB, 1, 0);
+			break;
+		}
+	}
+}
+
+//This function will allocate space by moving occupied blocks out of the way
+int allocate_space(int amount_to_alloc, int total_blocks)
+{
+	int previous_free_block_start = VCB->free_block_start;
+	int j = 0; // j is an index for alloc_block_array
+
+	// creating buffer_bitmap to read the freespace from disk
+	if (buffer_bitmap == NULL)
+	{
+		buffer_bitmap = malloc(sizeof(buffer_bitmap) * total_blocks);
+	}
+
+	LBAread(buffer_bitmap, 5, 1); // blocks 1 -> 5 represent our freespace bitmap
+
+	/*
+	this iterates through the buffer_bitmap to see if block is free or occupied.
+	If it is occupued, move() will move the contents of the block somewhere else.
+	*/
+
+	printf("These positions are given to caller and written to disk: \n");
+	for (int i = VCB->free_block_start ; i < total_blocks; i++)
+	{
+		
+		if (j <= amount_to_alloc)
+		{
+			
+			// block is free. Nothing to move
+			if (buffer_bitmap[i] == 0)
+			{
+				// printf("block %d freely written to \n", i);
+				buffer_bitmap[i] = 1;
+				j++;
+			}
+			else
+			{
+				// printf("block %d was moved then written to \n", i);
+				//run a move() function to move stuff in block somewhere else.
+				buffer_bitmap[i] = 1;
+				j++;
+			}
+		}
+		else if (j == amount_to_alloc + 1) // exits if no more blocks need to be allocated.
+		{
+			i = total_blocks;
+		}
+		else if (i == total_blocks - 1) // implies their is no free space left.
+		{
+			// printf("no more space available\n");
+		}
+	}
+	printf("\n");
+
+	// push updated bitmap to disk
+	LBAwrite(buffer_bitmap, 5, 1);
+
+	// updates VCB with new first free block position.
+	update_free_block_start(total_blocks);
+
+	return previous_free_block_start;
+}
+
+/*
+This function is used for cleaning the blocks.
+This is done to produce nice looking hexdumps.
+*/
+
+// void flush_blocks(int numOfBlocks, uint64_t blockSize)
+// {
+// 	uint64_t * clean_this_block = malloc(blockSize);
+
+// 	for (int i = 0; i < numOfBlocks; i++)
+// 	{
+// 		LBAread(clean_this_block, 1, i);
+// 		for (int j = 0; j < blockSize / 8; j++)
+// 		{
+// 			clean_this_block[j] = 0;
+// 		}
+// 		LBAwrite(clean_this_block, 1, i);
+// 	}
+
+// 	free(clean_this_block);
+// 	clean_this_block = NULL;
+// }
+
+void init_bitmap(int numOfBlocks, uint64_t blockSize)
+{
+
+	int first_free_block = 0;
+
+	// creating bitmap for free space
+	if (buffer_bitmap == NULL)
+	{
+		buffer_bitmap = malloc(sizeof(buffer_bitmap) * numOfBlocks);
+	}
+
+	//initializing dedicated block space for VCB and freespace bitmap
+	for (int i = 0; i < 6; i++)
+	{
+		buffer_bitmap[i] = 1;
+	}
+
+	LBAwrite(buffer_bitmap, 5, 1);
+
+	update_free_block_start(numOfBlocks);
 }
 
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
-	{
+{
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 	/* TODO: Add any code you need to initialize your file system. */
-	vcb_buffer = malloc(blockSize);	//default blockSize is 512
-	LBAread(vcb_buffer, 1, 0);	
+	// vcb_buffer = malloc(blockSize);	//default blockSize is 512
+	// LBAread(vcb_buffer, 1, 0);	
 	
-	if(vcb_buffer->magic_num != 3){
-		vcb_buffer->block_size = blockSize;
-		vcb_buffer->total_blocks = numberOfBlocks;
-		vcb_buffer->total_free_blocks = 8;	//8 is random value for testing
-		//vcb_buffer->fat_start = 1;
-		//vcb_buffer->fat_len = 6;	//6 is random value for testing
-		vcb_buffer->free_block_start = 9;	//9 is random value for testing
-		vcb_buffer->dir_entr_start = 1;
-		vcb_buffer->dir_entr_len = 50;
-		vcb_buffer->magic_num = 3;		
-	}
+	// if(vcb_buffer->magic_num != 3){
+	// 	vcb_buffer->block_size = blockSize;
+	// 	vcb_buffer->total_blocks = numberOfBlocks;
+	// 	vcb_buffer->total_free_blocks = 8;	//8 is random value for testing
+	// 	//vcb_buffer->fat_start = 1;
+	// 	//vcb_buffer->fat_len = 6;	//6 is random value for testing
+	// 	vcb_buffer->free_block_start = 9;	//9 is random value for testing
+	// 	vcb_buffer->dir_entr_start = 1;
+	// 	vcb_buffer->dir_entr_len = 50;
+	// 	vcb_buffer->magic_num = 3;		
+	// }
 	
-	LBAwrite(vcb_buffer, 1, 0);
+	// LBAwrite(vcb_buffer, 1, 0);
 
 	
 	//-------------------------------------------------------
@@ -112,89 +227,102 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	/*x # of blocks = x # of bits in default case 19531 blocks
 	so this means 19531 bits To find # of bytes divide total blocks by 8.0 
 	a float because we want the ceiling value*/
-	int byte_num = (int)ceil(vcb_buffer->total_blocks/8.0);	
-	/*To find the number of blocks in free space divide bytes 
-	by blockSize; default block size is 512. Then read 
-	vcb buffer and then write the total num of free blocks to it*/
-	//LBAread(vcb_buffer, 1, 0);
-	vcb_buffer->total_free_blocks = (int)ceil((float)byte_num/blockSize);
-	LBAwrite(vcb_buffer,1,0);
+	// int byte_num = (int)ceil(vcb_buffer->total_blocks/8.0);	
+	// /*To find the number of blocks in free space divide bytes 
+	// by blockSize; default block size is 512. Then read 
+	// vcb buffer and then write the total num of free blocks to it*/
+	// //LBAread(vcb_buffer, 1, 0);
+	// vcb_buffer->total_free_blocks = (int)ceil((float)byte_num/blockSize);
+	// LBAwrite(vcb_buffer,1,0);
 
-	/*Now malloc freespace */
-	u_int8_t * free_space = malloc(vcb_buffer->total_free_blocks*blockSize);
-	LBAwrite(free_space, 5, 1);
+	// VCB = malloc(blockSize);
+	
+	// //VCB is updated with whatever is at position 0
+	// LBAread(VCB, 1, 0);
 
-	//mark the first 6 bits as used
-	for(int i = 0; i<6; i++){
-		free_space[i] = 1;
+	/*
+	checking if magic number of block 0 is 3.
+	if it is 3 then VCB is already formatted,
+	and we don't need to initialize.
+	*/
+
+	if (VCB->magic_num != 3)
+	{
+		// flush_blocks(numberOfBlocks, blockSize);
+		VCB->magic_num = 3;
+		VCB->total_blocks = numberOfBlocks;
+		VCB->block_size = blockSize;
+
+		//init_bitmap() also returns the first free block in freespace bitmap
+		init_bitmap(numberOfBlocks, blockSize); 
+		update_free_block_start(blockSize);
+
+		// --------- INIT ROOT DIRECTORY ---------- //
+
+		/*
+		creating an array of 51 dir_entries
+		changed sizeof(dir_entr) -> sizeof(root_dir) * 5
+		since sizeof(dir_entr) was producing weird hexdump error
+		*/
+
+		dir_entr * root_dir = malloc(blockSize * 6); 
+			
+		// printf("Size of dir_entr: %ld \n", sizeof(dir_entr));
+		// printf("blocks to allocate for root: %ld \n\n", (sizeof(dir_entr)* 64) / 512);
+
+		strncpy(root_dir[0].filename, ".", 1);
+		strncpy(root_dir[1].filename, "..", 2);
+
+		root_dir[0].size = root_dir[1].size = sizeof(dir_entr) * 64;
+
+		root_dir[0].permissions = root_dir[1].permissions = 700;
+
+		root_dir[0].is_file = root_dir[1].is_file = 0;
+
+		/*
+		I want to allocate 6 blocks for the root. allocate_space() 
+		will return the starting block in the freespace bitmap.
+		VCB->dir_entr_start will represent the starting block of
+		the root directory.
+		*/
+
+		VCB->dir_entr_start = root_dir[0].starting_block = allocate_space(5, numberOfBlocks);
 		
-	}
-	LBAwrite(free_space, 5, 1);
-	
-	//write to vcb where free blocks start
-	vcb_buffer->free_block_start = 1;
-	LBAwrite(vcb_buffer,1,0);
-
-	//--------------------------------------------------------
-	
-	
-	/*Lets say we want 50 direcotry entries. The size of a single 
-	directory entry is 48. So we need enough blocks to fit 
-	50*48 = 2400 bytes. For this we need at least 5 blocks.
-	But 5 blocks mean 5*512 = 2560 bytes, meaning we have 
-	room for for 8 more directory entries. So now we want 
-	53 directory entries. This will be defined up top*/
-	
-	dir_entr * dir_entr_array = malloc(5*blockSize);
-	for(int i =0; i<53;i++){
-		//Initialize each directory structure to be in a free state?
-		dir_entr_array[i].next = 0;
+		root_dir[1].starting_block = root_dir[0].starting_block;
 		
+
+		// printf("Size of root_dir: %d \n", root_dir[0].size);
+		// printf("root_dir[0].starting_block : %d \n", root_dir[0].starting_block);
+		// printf("root_dir[0].filename : %s \n", root_dir[0].filename);
+		// printf("root_dir[1].filename : %s \n\n", root_dir[1].filename);
+
+		for (int i = 2; i < 64; i++)
+		{
+			// empty filename will imply that it is free to write to
+			strncpy(root_dir[i].filename, "", 0);
+		}
+
+		LBAwrite(root_dir, 6, root_dir[0].starting_block);
+
+		LBAwrite(VCB, 1, 0);
+
+		//---------- cleaning up malloc'd spaces ---------- //
+
+		free(root_dir);
+		root_dir = NULL;
 	}
-	/*call freeSpaceStart to find the next free space to be the
-	starting block for the next directory entry*/
-	int dir_entr_starting_block = freeSpaceStart(free_space, 5);
-	LBAread(dir_entr_array, 5,dir_entr_starting_block);
-	
 
-	//set values for directory entry 0
-	dir_entr_array[0].next = 1;
-	dir_entr_array[0].start_block = dir_entr_starting_block;
-	/*2544 because that's the max number of files that
-	can fit into the 5 allocated blocks(2560)*/
-	dir_entr_array[0].size = 2544;
-	dir_entr_array[0].file_type = 1;
-	//only user will have read, write,execute permissions
-	dir_entr_array[0].persmissions = 700;
-	strcpy(dir_entr_array[0].filename, ".");
-	//user will have access to root
-	dir_entr_array[0].user_ID = 1;
-	//groups will not have access to root
-	dir_entr_array[0].group_ID = 0;
+		free(VCB);
+		VCB = NULL;
 
-	//set values for directory entry 1;
-	dir_entr_array[1].next = 1;
-	dir_entr_array[1].start_block = dir_entr_starting_block;
-	/*2544 because that's the max number of files that
-	can fit into the 5 allocated blocks(2560)*/
-	dir_entr_array[1].size = 2544;
-	dir_entr_array[1].file_type = 1;
-	//only user will have read, write,execute permissions
-	dir_entr_array[1].persmissions = 700;
-	strcpy(dir_entr_array[1].filename, "..");
-	//user will have access to root
-	dir_entr_array[1].user_ID = 1;
-	//groups will not have access to root
-	dir_entr_array[1].group_ID = 0;
-	LBAwrite(dir_entr_array, 5, dir_entr_starting_block);
-
-	//return starting block to vcb
-	vcb_buffer->dir_entr_start = dir_entr_starting_block;
-	LBAwrite(vcb_buffer, 1, 0);
-
-	//printf("Free Block starts at: %d", vcb_buffer->free_block_start);
-	return 0;
-	}
+		if (buffer_bitmap != NULL)
+		{
+			free(buffer_bitmap);
+			buffer_bitmap = NULL;
+		}
+		
+		return 0;
+}
 	
 	
 void exitFileSystem ()
