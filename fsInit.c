@@ -31,174 +31,31 @@
 
 #include "fsLow.h"
 #include "mfs.h"
-
-typedef struct vcb
-{
-	int block_size;
-	int total_blocks;
-	int free_block_start;
-	int dir_entr_start;
-	int magic_num;
-} vcb;
-
-// VCB is declared globally here
-vcb * VCB;
-
-typedef struct dir_entr
-{
-
-	int starting_block;
-	int size;
-
-	// used tell if this is a file or directory
-	int is_file;
-
-	// points to the next file. if null then it is free
-	int next; 
-
-	int permissions;
-	char filename[20];
-	uid_t user_ID;
-	gid_t group_ID;
-
-} dir_entr;
-
-uint8_t * buffer_bitmap;
-
-void update_free_block_start(int total_blocks) 
-{
-
-	/*
-	 reading free space into buffer from disk, 
-	 that way I can iterate through the freespace bitmap
-	 */
-
-	if (buffer_bitmap == NULL)
-	{
-		buffer_bitmap = malloc(sizeof(buffer_bitmap) * total_blocks);
-	}
-	
-	LBAread(buffer_bitmap, 5, 1);
-
-	//finding the first free block in the freespace bitmap
-	for (int i = 0; i < total_blocks; i++)
-	{
-		if (buffer_bitmap[i] == 0)
-		{
-			VCB->free_block_start = i;
-			// printf("updated free_space_start: %d \n\n", VCB->free_block_start);
-			
-			LBAwrite(VCB, 1, 0);
-			break;
-		}
-	}
-}
-
-//This function will allocate space by moving occupied blocks out of the way
-int allocate_space(int amount_to_alloc, int total_blocks)
-{
-	int previous_free_block_start = VCB->free_block_start;
-	int j = 0; // j is an index for alloc_block_array
-
-	// creating buffer_bitmap to read the freespace from disk
-	if (buffer_bitmap == NULL)
-	{
-		buffer_bitmap = malloc(sizeof(buffer_bitmap) * total_blocks);
-	}
-
-	LBAread(buffer_bitmap, 5, 1); // blocks 1 -> 5 represent our freespace bitmap
-
-	/*
-	this iterates through the buffer_bitmap to see if block is free or occupied.
-	If it is occupued, move() will move the contents of the block somewhere else.
-	*/
-
-	printf("These positions are given to caller and written to disk: \n");
-	for (int i = VCB->free_block_start ; i < total_blocks; i++)
-	{
-		
-		if (j <= amount_to_alloc)
-		{
-			
-			// block is free. Nothing to move
-			if (buffer_bitmap[i] == 0)
-			{
-				// printf("block %d freely written to \n", i);
-				buffer_bitmap[i] = 1;
-				j++;
-			}
-			else
-			{
-				// printf("block %d was moved then written to \n", i);
-				//run a move() function to move stuff in block somewhere else.
-				buffer_bitmap[i] = 1;
-				j++;
-			}
-		}
-		else if (j == amount_to_alloc + 1) // exits if no more blocks need to be allocated.
-		{
-			i = total_blocks;
-		}
-		else if (i == total_blocks - 1) // implies their is no free space left.
-		{
-			// printf("no more space available\n");
-		}
-	}
-	printf("\n");
-
-	// push updated bitmap to disk
-	LBAwrite(buffer_bitmap, 5, 1);
-
-	// updates VCB with new first free block position.
-	update_free_block_start(total_blocks);
-
-	return previous_free_block_start;
-}
+#include "freeAlloc.c"
 
 /*
 This function is used for cleaning the blocks.
 This is done to produce nice looking hexdumps.
 */
 
-// void flush_blocks(int numOfBlocks, uint64_t blockSize)
-// {
-// 	uint64_t * clean_this_block = malloc(blockSize);
-
-// 	for (int i = 0; i < numOfBlocks; i++)
-// 	{
-// 		LBAread(clean_this_block, 1, i);
-// 		for (int j = 0; j < blockSize / 8; j++)
-// 		{
-// 			clean_this_block[j] = 0;
-// 		}
-// 		LBAwrite(clean_this_block, 1, i);
-// 	}
-
-// 	free(clean_this_block);
-// 	clean_this_block = NULL;
-// }
-
-void init_bitmap(int numOfBlocks, uint64_t blockSize)
+void flush_blocks(int numOfBlocks, uint64_t blockSize)
 {
+	uint64_t * clean_this_block = malloc(blockSize);
 
-	int first_free_block = 0;
-
-	// creating bitmap for free space
-	if (buffer_bitmap == NULL)
+	for (int i = 0; i < numOfBlocks; i++)
 	{
-		buffer_bitmap = malloc(sizeof(buffer_bitmap) * numOfBlocks);
+		LBAread(clean_this_block, 1, i);
+		for (int j = 0; j < blockSize / 8; j++)
+		{
+			clean_this_block[j] = 0;
+		}
+		LBAwrite(clean_this_block, 1, i);
 	}
 
-	//initializing dedicated block space for VCB and freespace bitmap
-	for (int i = 0; i < 6; i++)
-	{
-		buffer_bitmap[i] = 1;
-	}
-
-	LBAwrite(buffer_bitmap, 5, 1);
-
-	update_free_block_start(numOfBlocks);
+	free(clean_this_block);
+	clean_this_block = NULL;
 }
+
 
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 {
@@ -248,7 +105,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	if (VCB->magic_num != 3)
 	{
-		// flush_blocks(numberOfBlocks, blockSize);
+		flush_blocks(numberOfBlocks, blockSize);
 		VCB->magic_num = 3;
 		VCB->total_blocks = numberOfBlocks;
 		VCB->block_size = blockSize;
@@ -314,20 +171,26 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		free(VCB);
 		VCB = NULL;
-
-		if (buffer_bitmap != NULL)
-		{
-			free(buffer_bitmap);
-			buffer_bitmap = NULL;
-		}
 		
 		return 0;
 }
 	
 	
 void exitFileSystem ()
+<<<<<<< HEAD
 	{
 	printf ("System exiting\n");
 	}
 
 	
+=======
+{
+	if (buffer_bitmap != NULL)
+	{
+		free(buffer_bitmap);
+		buffer_bitmap = NULL;
+	}
+	
+	printf ("System exiting\n");
+}
+>>>>>>> b3caf003ce60ccfdcad53419d8e5c6249e22cecd
