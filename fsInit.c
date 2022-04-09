@@ -61,41 +61,11 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 {
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 	/* TODO: Add any code you need to initialize your file system. */
-	// vcb_buffer = malloc(blockSize);	//default blockSize is 512
-	// LBAread(vcb_buffer, 1, 0);	
-	
-	// if(vcb_buffer->magic_num != 3){
-	// 	vcb_buffer->block_size = blockSize;
-	// 	vcb_buffer->total_blocks = numberOfBlocks;
-	// 	vcb_buffer->total_free_blocks = 8;	//8 is random value for testing
-	// 	//vcb_buffer->fat_start = 1;
-	// 	//vcb_buffer->fat_len = 6;	//6 is random value for testing
-	// 	vcb_buffer->free_block_start = 9;	//9 is random value for testing
-	// 	vcb_buffer->dir_entr_start = 1;
-	// 	vcb_buffer->dir_entr_len = 50;
-	// 	vcb_buffer->magic_num = 3;		
-	// }
-	
-	// LBAwrite(vcb_buffer, 1, 0);
 
+	VCB = malloc(blockSize);
 	
-	//-------------------------------------------------------
-
-	/*x # of blocks = x # of bits in default case 19531 blocks
-	so this means 19531 bits To find # of bytes divide total blocks by 8.0 
-	a float because we want the ceiling value*/
-	// int byte_num = (int)ceil(vcb_buffer->total_blocks/8.0);	
-	// /*To find the number of blocks in free space divide bytes 
-	// by blockSize; default block size is 512. Then read 
-	// vcb buffer and then write the total num of free blocks to it*/
-	// //LBAread(vcb_buffer, 1, 0);
-	// vcb_buffer->total_free_blocks = (int)ceil((float)byte_num/blockSize);
-	// LBAwrite(vcb_buffer,1,0);
-
-	// VCB = malloc(blockSize);
-	
-	// //VCB is updated with whatever is at position 0
-	// LBAread(VCB, 1, 0);
+	//VCB is updated with whatever is at position 0
+	LBAread(VCB, 1, 0);
 
 	/*
 	checking if magic number of block 0 is 3.

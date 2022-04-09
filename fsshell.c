@@ -33,6 +33,8 @@
 
 #include "fsLow.h"
 #include "mfs.h"
+#include "dir_func.c"
+#include "b_io.c"
 
 #define PERMISSIONS (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
 
@@ -671,6 +673,11 @@ int main (int argc, char * argv[])
 	while (1)
 		{
 		cmdin = readline("Prompt > ");
+		//**********************************
+		//fdDir *  open = fs_opendir(".");
+		//fs_readdir(open);
+		
+		//**********************************
 #ifdef COMMAND_DEBUG
 		printf ("%s\n", cmdin);
 #endif
