@@ -82,7 +82,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		// --------- INIT ROOT DIRECTORY ---------- //
 
-		create_dir(".", "..", VCB->free_block_start, 700);
+		create_dir(".", 700);
 	}
 		
 		return 0;
@@ -91,11 +91,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 void exitFileSystem ()
 {
-	if (dirent != NULL)
-	{
-		free(dirent);
-		dirent = NULL;
-	}
 	
 	if (VCB != NULL)
 	{
