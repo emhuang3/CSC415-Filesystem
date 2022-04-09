@@ -14,7 +14,7 @@ status = mkdir("/home/cnd/mod1", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 */
 
 dir_entr * dirent;
-dir_entr * parent; // this will be updated in the validate_path() function
+dir_entr * cur_dir; // this will be updated in the validate_path() function
 void create_dir(char * name, int permissions) 
 {
     if (dirent == NULL)
@@ -40,10 +40,10 @@ void create_dir(char * name, int permissions)
     else // if not root
     {
         dirent[0].starting_block = allocate_space(5);
-        dirent[1].starting_block = parent->starting_block;
+        dirent[1].starting_block = cur_dir->starting_block;
         dirent[0].permissions = permissions;
-        dirent[1].permissions = parent->permissions;
-        strncpy(dirent[1].filename, parent->filename, sizeof(parent->filename));
+        dirent[1].permissions = cur_dir->permissions;
+        strncpy(dirent[1].filename, cur_dir->filename, sizeof(cur_dir->filename));
         printf("------------CREATED NEW DIRECTORY------------\n");
     }
 
@@ -69,50 +69,131 @@ void create_dir(char * name, int permissions)
     free(dirent);
 	dirent = NULL;
 
-    free(parent);
-    parent = NULL;
+    // free(cur_dir);
+    // cur_dir = NULL;
 }
 
-// to be called in mk_dir()
-int validate_path(char * pathnames, int starting_block, int counter) {
-    if (parent == NULL)
+char * name;
+char * saved_filename;
+int ret;
+int num_of_paths;
+
+// to be called in parse_path(). This function will update current working directory
+int validate_path(char * name) {
+    if (cur_dir == NULL)
     {
-        parent = malloc(VCB->block_size*6);
+        cur_dir = malloc(VCB->block_size*6);
+        LBAread(cur_dir, 6, VCB->root_start);
     }
 
-    LBAread(parent, 6, starting_block);
-    int my_count = counter++;
+    //iterate through dir_entries of current directory
+    for (int i = 2; i < 64; i++)
+    {
+        if (strcmp(cur_dir[i].filename, name) == 0 && num_of_paths > 0)
+        {
+            printf("found path\n");
 
-    // check that parent contains path
+            // updating current directory with found path
+            LBAread(cur_dir, 6, cur_dir[i].starting_block);
+            return 0;
+        }
+        else if (i == 63 && num_of_paths == 0)
+        {
+            printf("path does not exist\n");
+            printf("able to create this directory\n");
 
-    // make a recusive call of validate_path() if path exists
+            // save name
+            saved_filename = name;
+            return 0;
+        }
+        else if (strcmp(cur_dir[i].filename, name) == 0 && num_of_paths == 0)
+        {
+            printf("path already exists\n");
+            printf("NOT able to create this directory\n");
 
-    //if counter == pathnames.size, then check that path does not exist in latest directory
+            // updating current directory with found path
+            LBAread(cur_dir, 6, cur_dir[i].starting_block);
+            return -1;
+        }
+        else
+        {
+            // this else-container implies that path was not found while there are still paths left to search
+            printf("path does not exist\n");
+            printf("NOT able to create this directory\n");
 
-    //return a success or failure to validate path
+            return -1;
+        }
+    }
 }
 
-char * parse_path(char * pathname) 
+
+int parse_path(const char * pathname) 
 {
-    // call str_tok to divide pathname into an array
+    char * buffer_path;
+    char count_slashes[20];
 
-    // return array
+    strncpy(count_slashes, pathname, strlen(pathname));
+    strncpy(buffer_path, pathname, sizeof(pathname));
+
+    // strncpy(count_slashes, pathname, strlen(pathname));
+
+    for (int i = 0; i < strlen(count_slashes); i++)
+    {
+        if (count_slashes[i] == '/')
+        {
+            num_of_paths++;
+        }
+    }
+
+    printf("num of paths: %d\n", num_of_paths);
+
+
+    // call str_tok to divide pathname into an array
+    name = strtok(buffer_path, "/");
+
+    while (name != NULL)
+    {
+        ret = validate_path(name);
+        if (ret == -1) 
+        {
+            printf("failed to validate path\n");
+            return ret;
+        }
+    }
+
+    return ret;
 }
 
-int fs_mkdir(const char *pathname, mode_t mode) 
+int fs_mkdir(const char * pathname, mode_t mode) 
 {
     // will return -1  if invalid, and 0 if success
+    int ret = parse_path(pathname);
 
-    // call parse path to divide string into array of searchable strings
+    if (ret == 0)
+    {
 
-    // call find dir path. this will return a value depending on success or failure
+        //searching for a free directory entry to write to in current directory
+        for (int i = 0; i < 64; i++)
+        {
+            if (cur_dir->filename == NULL)
+            {
+                //creating new directory
+                strncpy(cur_dir[i].filename, saved_filename, sizeof(saved_filename));
+                create_dir(saved_filename, mode);
 
-    // call create_dir if success else clean parent buffer and return -1
-
+                // reset current working directory if needed
+                break;
+            }
+            else if (i == 63)
+            {
+                printf("Unable to find free directory entry inside /%s\n", cur_dir[0].filename);
+            }
+        }
+    }
+    return ret;
 }
 
 int fs_rmdir(const char *pathname) 
 {
 
 }
-
