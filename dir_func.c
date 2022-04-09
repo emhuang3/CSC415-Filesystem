@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <mfs.h>
 #include "freeAlloc.c"
+
 /*
 example of make dir with permissions
 status = mkdir("/home/cnd/mod1", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
@@ -79,12 +80,16 @@ int validate_path(char * pathnames, int starting_block, int counter) {
         parent = malloc(VCB->block_size*6);
     }
 
-    LBAread(dirent, 6, starting_block);
+    LBAread(parent, 6, starting_block);
     int my_count = counter++;
 
     // check that parent contains path
 
+    // make a recusive call of validate_path() if path exists
+
     //if counter == pathnames.size, then check that path does not exist in latest directory
+
+    //return a success or failure to validate path
 }
 
 char * parse_path(char * pathname) 
@@ -102,7 +107,7 @@ int fs_mkdir(const char *pathname, mode_t mode)
 
     // call find dir path. this will return a value depending on success or failure
 
-    //call create_dir if success else return -1
+    // call create_dir if success else clean parent buffer and return -1
 
 }
 
