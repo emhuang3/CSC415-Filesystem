@@ -92,7 +92,7 @@ int validate_path(char * name) {
         LBAread(temp_curr_dir, 6, VCB->root_start);
     }
     
-    else
+    else if (temp_curr_dir == NULL)
     {
         temp_curr_dir = malloc(VCB->block_size*6);
         memcpy(temp_curr_dir, curr_dir, sizeof(curr_dir));
@@ -140,6 +140,7 @@ int validate_path(char * name) {
             printf("able to create this directory\n");
 
             // save name
+            memset(saved_filename,0, sizeof(saved_filename));
             strncpy(saved_filename, name, strlen(name));
             // saved_filename = name;
             return 0;
@@ -151,10 +152,10 @@ int validate_path(char * name) {
 int parse_pathname(const char * pathname)
 {
     char count_slashes[20];
-    char buffer_pathname[20];
+    char * buffer_pathname = strdup(pathname);
     
     strncpy(count_slashes, pathname, strlen(pathname));
-    strncpy(buffer_pathname, pathname, strlen(pathname));
+    // strncpy(buffer_pathname, pathname, strlen(pathname));
 
     printf("buffer_pathname: %s\n", buffer_pathname);
 
@@ -191,6 +192,8 @@ int parse_pathname(const char * pathname)
 
         name = strtok(NULL, "/");
     }
+
+    // memset(buffer_pathname, 0, sizeof(buffer_pathname));
 
     return ret;
 }
