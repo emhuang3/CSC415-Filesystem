@@ -85,16 +85,17 @@ int validate_path(char * name) {
     {
         curr_dir = malloc(VCB->block_size*6);
         temp_curr_dir = malloc(VCB->block_size*6);
-        temp_curr_dir = curr_dir;
+        memcpy(temp_curr_dir, curr_dir, sizeof(curr_dir));
 
         // starting from root directory
+        LBAread(curr_dir, 6, VCB->root_start);
         LBAread(temp_curr_dir, 6, VCB->root_start);
     }
     
     else
     {
         temp_curr_dir = malloc(VCB->block_size*6);
-        temp_curr_dir = curr_dir;
+        memcpy(temp_curr_dir, curr_dir, sizeof(curr_dir));
 
         // starting from the current working directory
         LBAread(temp_curr_dir, 6, curr_dir[0].starting_block);
@@ -120,7 +121,7 @@ int validate_path(char * name) {
 
             // updating current directory with found path
             LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
-            LBAread(curr_dir, 6, temp_curr_dir[i].starting_block);
+            // LBAread(curr_dir, 6, temp_curr_dir[i].starting_block);
 
             printf("Current directory: %s\n\n", curr_dir[0].filename);
             return -1;
@@ -128,7 +129,7 @@ int validate_path(char * name) {
         else if (i == 63 && num_of_paths > 0)
         {
             // this else-container implies that path was not found while there are still paths left to search
-            printf("path does not exist\n");
+            printf("path %s does not exist in %s Directory\n", name, temp_curr_dir[0].filename);
             printf("NOT able to create this directory\n");
 
             return -1;
@@ -150,9 +151,10 @@ int validate_path(char * name) {
 int parse_pathname(const char * pathname)
 {
     char count_slashes[20];
+    char buffer_pathname[20];
     
     strncpy(count_slashes, pathname, strlen(pathname));
-    char * buffer_pathname = strdup(pathname);
+    strncpy(buffer_pathname, pathname, strlen(pathname));
 
     printf("buffer_pathname: %s\n", buffer_pathname);
 
@@ -218,12 +220,8 @@ int fs_mkdir(const char * pathname, mode_t mode)
 
                 // update current directory on disk
                 LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
-
-                // reset current working directory if needed
-                free(temp_curr_dir);
-                temp_curr_dir = NULL;
                 
-                break;
+                i = 64;
             }
             else if (i == 63)
             {
@@ -231,12 +229,11 @@ int fs_mkdir(const char * pathname, mode_t mode)
             }
         }
     }
-    else 
-    {
-        //reset current working directory
-        free(temp_curr_dir);
-        temp_curr_dir = NULL;
-    }
+
+    //reset current working directory
+    free(temp_curr_dir);
+    temp_curr_dir = NULL;
+
     return ret;
 }
 
