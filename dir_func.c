@@ -13,8 +13,9 @@ example of make dir with permissions
 status = mkdir("/home/cnd/mod1", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 */
 
-dir_entr * dirent;
-dir_entr * cur_dir; // this will be updated in the validate_path() function
+dir_entr * dirent;        // this will be used to make a new child directory
+dir_entr * temp_curr_dir; // this will represent parent_dir and be reset at the end of mk_dir()
+dir_entr * curr_dir;      // this will be kept in memory 
 void create_dir(char * name, int permissions) 
 {
     if (dirent == NULL)
@@ -22,7 +23,7 @@ void create_dir(char * name, int permissions)
         dirent = malloc(VCB->block_size*6);
     }
     
-    strncpy(dirent[0].filename, name, sizeof(name));
+    strncpy(dirent[0].filename, name, strlen(name));
 
     // these two will lines will always be true so no need to put them in if statments
     dirent[0].size = dirent[1].size = sizeof(dir_entr) * 64;
@@ -40,10 +41,10 @@ void create_dir(char * name, int permissions)
     else // if not root
     {
         dirent[0].starting_block = allocate_space(5);
-        dirent[1].starting_block = cur_dir->starting_block;
+        dirent[1].starting_block = temp_curr_dir->starting_block;
         dirent[0].permissions = permissions;
-        dirent[1].permissions = cur_dir->permissions;
-        strncpy(dirent[1].filename, cur_dir->filename, sizeof(cur_dir->filename));
+        dirent[1].permissions = temp_curr_dir->permissions;
+        strncpy(dirent[1].filename, temp_curr_dir->filename, strlen(temp_curr_dir->filename));
         printf("------------CREATED NEW DIRECTORY------------\n");
     }
 
@@ -73,7 +74,7 @@ void create_dir(char * name, int permissions)
     // cur_dir = NULL;
 }
 
-char * saved_filename;
+char saved_filename[20];
 int ret;
 int num_of_paths;
 
@@ -83,43 +84,34 @@ int validate_path(char * name) {
     // this represents the paths remaining to be searched
     num_of_paths--;
 
-    if (cur_dir == NULL)
+    if (temp_curr_dir == NULL)
     {
-        cur_dir = malloc(VCB->block_size*6);
-        LBAread(cur_dir, 6, VCB->root_start);
+        temp_curr_dir = malloc(VCB->block_size*6);
+        LBAread(temp_curr_dir, 6, VCB->root_start);
     }
 
     //iterate through dir_entries of current directory
     for (int i = 2; i < 64; i++)
     {
-        if (strcmp(cur_dir[i].filename, name) == 0 && num_of_paths > 0)
+        if (strcmp(temp_curr_dir[i].filename, name) == 0 && num_of_paths > 0)
         {
             printf("found path\n");
 
             // updating current directory with found path
-            LBAread(cur_dir, 6, cur_dir[i].starting_block);
+            LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
 
-            printf("Current directory: %s\n", cur_dir[0].filename);
+            printf("Current directory: %s\n\n", temp_curr_dir[0].filename);
             return 0;
         }
-        else if (i == 63 && num_of_paths == 0)
-        {
-            printf("path does not exist\n");
-            printf("able to create this directory\n");
-
-            // save name
-            saved_filename = name;
-            return 0;
-        }
-        else if (strcmp(cur_dir[i].filename, name) == 0 && num_of_paths == 0)
+        else if (strcmp(temp_curr_dir[i].filename, name) == 0 && num_of_paths == 0)
         {
             printf("path already exists\n");
             printf("NOT able to create this directory\n");
 
             // updating current directory with found path
-            LBAread(cur_dir, 6, cur_dir[i].starting_block);
+            LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
 
-            printf("Current directory: %s\n", cur_dir[0].filename);
+            printf("Current directory: %s\n\n", temp_curr_dir[0].filename);
             return -1;
         }
         else if (i == 63 && num_of_paths > 0)
@@ -129,6 +121,16 @@ int validate_path(char * name) {
             printf("NOT able to create this directory\n");
 
             return -1;
+        }
+        else if (i == 63 && num_of_paths == 0)
+        {
+            printf("path does not exist\n");
+            printf("able to create this directory\n");
+
+            // save name
+            strncpy(saved_filename, name, strlen(name));
+            // saved_filename = name;
+            return 0;
         }
     }
 }
@@ -161,7 +163,7 @@ int parse_pathname(const char * pathname)
         * newLine = ' ';
     } 
 
-    // call str_tok to divide pathname into an array
+    // call str_tok to divide pathname into tokens
     char * name = strtok(buffer_pathname, "/");
     
     while (name != NULL)
@@ -192,32 +194,38 @@ int fs_mkdir(const char * pathname, mode_t mode)
         //searching for a free directory entry to write to in current directory
         for (int i = 2; i < 64; i++)
         {
-            if (strcmp(cur_dir[i].filename, "") == 0)
+            if (strcmp(temp_curr_dir[i].filename, "") == 0)
             {
                 //creating new directory
-                strncpy(cur_dir[i].filename, saved_filename, sizeof(saved_filename));
-                cur_dir[i].starting_block = VCB->free_block_start;
+                strncpy(temp_curr_dir[i].filename, saved_filename, strlen(saved_filename));
+                temp_curr_dir[i].starting_block = VCB->free_block_start;
 
-                printf("Current Directory: %s\n", cur_dir[0].filename);
-                printf("%s added to index %d in %s Directory\n", cur_dir[i].filename, i, cur_dir[0].filename);
-                printf("%s starting block: %d\n\n", cur_dir[i].filename, VCB->free_block_start);
+                printf("Current Directory: %s\n", temp_curr_dir[0].filename);
+                printf("%s added to index %d in %s Directory\n", temp_curr_dir[i].filename, i, temp_curr_dir[0].filename);
+                printf("%s starting block: %d\n\n", temp_curr_dir[i].filename, VCB->free_block_start);
 
                 create_dir(saved_filename, mode);
 
                 // update current directory on disk
-                LBAwrite(cur_dir, 6, cur_dir[0].starting_block);
+                LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
 
                 // reset current working directory if needed
-                free(cur_dir);
-                cur_dir = NULL;
+                free(temp_curr_dir);
+                temp_curr_dir = NULL;
                 
                 break;
             }
             else if (i == 63)
             {
-                printf("Unable to find free directory entry inside /%s\n", cur_dir[0].filename);
+                printf("Unable to find free directory entry inside /%s\n", temp_curr_dir[0].filename);
             }
         }
+    }
+    else 
+    {
+        //reset current working directory
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
     }
     return ret;
 }
