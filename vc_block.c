@@ -11,7 +11,7 @@ typedef struct vcb
 	int block_size;
 	int total_blocks;
 	int free_block_start;
-	int dir_entr_start;
+	int root_start;
 	int magic_num;
 } vcb;
 
