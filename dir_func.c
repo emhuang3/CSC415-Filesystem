@@ -73,13 +73,16 @@ void create_dir(char * name, int permissions)
     // cur_dir = NULL;
 }
 
-char * name;
 char * saved_filename;
 int ret;
 int num_of_paths;
 
 // to be called in parse_path(). This function will update current working directory
 int validate_path(char * name) {
+
+    // this represents the paths remaining to be searched
+    num_of_paths--;
+
     if (cur_dir == NULL)
     {
         cur_dir = malloc(VCB->block_size*6);
@@ -95,6 +98,8 @@ int validate_path(char * name) {
 
             // updating current directory with found path
             LBAread(cur_dir, 6, cur_dir[i].starting_block);
+
+            printf("Current directory: %s\n", cur_dir[0].filename);
             return 0;
         }
         else if (i == 63 && num_of_paths == 0)
@@ -113,9 +118,11 @@ int validate_path(char * name) {
 
             // updating current directory with found path
             LBAread(cur_dir, 6, cur_dir[i].starting_block);
+
+            printf("Current directory: %s\n", cur_dir[0].filename);
             return -1;
         }
-        else
+        else if (i == 63 && num_of_paths > 0)
         {
             // this else-container implies that path was not found while there are still paths left to search
             printf("path does not exist\n");
@@ -127,15 +134,15 @@ int validate_path(char * name) {
 }
 
 
-int parse_path(const char * pathname) 
+int parse_pathname(const char * pathname) 
 {
-    char * buffer_path;
+    char buffer_pathname[20];
     char count_slashes[20];
-
+    
     strncpy(count_slashes, pathname, strlen(pathname));
-    strncpy(buffer_path, pathname, sizeof(pathname));
+    strncpy(buffer_pathname, pathname, strlen(pathname));
 
-    // strncpy(count_slashes, pathname, strlen(pathname));
+    printf("buffer_pathname: %s\n", buffer_pathname);
 
     for (int i = 0; i < strlen(count_slashes); i++)
     {
@@ -147,18 +154,28 @@ int parse_path(const char * pathname)
 
     printf("num of paths: %d\n", num_of_paths);
 
+    //just in case there is a newline character
+    char * newLine = strchr(buffer_pathname, '\n');
+    if (newLine)
+    {
+        * newLine = ' ';
+    } 
 
     // call str_tok to divide pathname into an array
-    name = strtok(buffer_path, "/");
-
+    char * name = strtok(buffer_pathname, "/");
+    
     while (name != NULL)
     {
+
+        printf("Pathname: %s : ", name);
         ret = validate_path(name);
         if (ret == -1) 
         {
             printf("failed to validate path\n");
             return ret;
         }
+
+        name = strtok(NULL, "/");
     }
 
     return ret;
@@ -167,21 +184,33 @@ int parse_path(const char * pathname)
 int fs_mkdir(const char * pathname, mode_t mode) 
 {
     // will return -1  if invalid, and 0 if success
-    int ret = parse_path(pathname);
+    int ret = parse_pathname(pathname);
 
     if (ret == 0)
     {
 
         //searching for a free directory entry to write to in current directory
-        for (int i = 0; i < 64; i++)
+        for (int i = 2; i < 64; i++)
         {
-            if (cur_dir->filename == NULL)
+            if (strcmp(cur_dir[i].filename, "") == 0)
             {
                 //creating new directory
                 strncpy(cur_dir[i].filename, saved_filename, sizeof(saved_filename));
+                cur_dir[i].starting_block = VCB->free_block_start;
+
+                printf("Current Directory: %s\n", cur_dir[0].filename);
+                printf("%s added to index %d in %s Directory\n", cur_dir[i].filename, i, cur_dir[0].filename);
+                printf("%s starting block: %d\n\n", cur_dir[i].filename, VCB->free_block_start);
+
                 create_dir(saved_filename, mode);
 
+                // update current directory on disk
+                LBAwrite(cur_dir, 6, cur_dir[0].starting_block);
+
                 // reset current working directory if needed
+                free(cur_dir);
+                cur_dir = NULL;
+                
                 break;
             }
             else if (i == 63)

@@ -83,6 +83,16 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		// --------- INIT ROOT DIRECTORY ---------- //
 
 		create_dir(".", 700);
+
+		//---------- TESTING MAKE DIR -----------//
+
+		fs_mkdir("/home", 777);
+
+		// simulating a reset to root directory
+		free(cur_dir);
+		cur_dir = NULL;
+
+		fs_mkdir("/home/Documents", 707);
 	}
 		
 		return 0;
@@ -91,6 +101,12 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 void exitFileSystem ()
 {
+	if (cur_dir != NULL)
+	{
+		free(cur_dir);
+		cur_dir = NULL;
+	}
+	
 	
 	if (VCB != NULL)
 	{
