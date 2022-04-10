@@ -33,8 +33,6 @@
 
 #include "fsLow.h"
 #include "mfs.h"
-#include "dir_func.c"
-#include "b_io.c"
 
 #define PERMISSIONS (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
 
@@ -44,7 +42,7 @@
 #define DIRMAX_LEN		4096
 
 /****   SET THESE TO 1 WHEN READY TO TEST THAT COMMAND ****/
-#define CMDLS_ON	1
+#define CMDLS_ON	0
 #define CMDCP_ON	0
 #define CMDMV_ON	0
 #define CMDMD_ON	1
@@ -673,13 +671,6 @@ int main (int argc, char * argv[])
 	while (1)
 		{
 		cmdin = readline("Prompt > ");
-		//**********************************
-		//fdDir *  open = fs_opendir(".");
-		//fs_readdir(open);
-		// const char * name = "/./../Documents";
-		// //parsePath(name);
-		// fs_opendir(name);
-		//**********************************
 #ifdef COMMAND_DEBUG
 		printf ("%s\n", cmdin);
 #endif
