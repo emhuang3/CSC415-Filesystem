@@ -69,9 +69,6 @@ void create_dir(char * name, int permissions)
 
     free(dirent);
 	dirent = NULL;
-
-    // free(cur_dir);
-    // cur_dir = NULL;
 }
 
 char saved_filename[20];
@@ -84,10 +81,23 @@ int validate_path(char * name) {
     // this represents the paths remaining to be searched
     num_of_paths--;
 
-    if (temp_curr_dir == NULL)
+    if (curr_dir == NULL)
+    {
+        curr_dir = malloc(VCB->block_size*6);
+        temp_curr_dir = malloc(VCB->block_size*6);
+        temp_curr_dir = curr_dir;
+
+        // starting from root directory
+        LBAread(temp_curr_dir, 6, VCB->root_start);
+    }
+    
+    else
     {
         temp_curr_dir = malloc(VCB->block_size*6);
-        LBAread(temp_curr_dir, 6, VCB->root_start);
+        temp_curr_dir = curr_dir;
+
+        // starting from the current working directory
+        LBAread(temp_curr_dir, 6, curr_dir[0].starting_block);
     }
 
     //iterate through dir_entries of current directory
