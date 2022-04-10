@@ -36,7 +36,7 @@ int load_Dir(char * token){
     
 }
 
-int parsePath(const char * pathname){
+int parsePathIter(const char * pathname){
     //first load the entire root directory
     currentDir = malloc(512*6);
     LBAread(currentDir, 6, 6);
@@ -64,7 +64,7 @@ fdDir * fs_opendir(const char * name){
     //load directory stream to iterate through
     /*Parse through each directory to check if it is valid and then load
     each as it is confirmed to be valid*/
-    dir_ent_position = parsePath(name);
+    dir_ent_position = parsePathIter(name);
     if(dir_ent_position == -1){
         printf("File path does not exist.\n");
     }
