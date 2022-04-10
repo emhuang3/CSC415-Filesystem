@@ -120,8 +120,9 @@ int validate_path(char * name) {
 
             // updating current directory with found path
             LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
+            LBAread(curr_dir, 6, temp_curr_dir[i].starting_block);
 
-            printf("Current directory: %s\n\n", temp_curr_dir[0].filename);
+            printf("Current directory: %s\n\n", curr_dir[0].filename);
             return -1;
         }
         else if (i == 63 && num_of_paths > 0)
@@ -146,13 +147,12 @@ int validate_path(char * name) {
 }
 
 
-int parse_pathname(const char * pathname) 
+int parse_pathname(const char * pathname)
 {
-    char buffer_pathname[20];
     char count_slashes[20];
     
     strncpy(count_slashes, pathname, strlen(pathname));
-    strncpy(buffer_pathname, pathname, strlen(pathname));
+    char * buffer_pathname = strdup(pathname);
 
     printf("buffer_pathname: %s\n", buffer_pathname);
 
