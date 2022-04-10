@@ -69,11 +69,11 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	
 	//checking if magic number is a match
-	if (VCB->magic_num != 4)
+	if (VCB->magic_num != 3)
 	{
 		flush_blocks(numberOfBlocks, blockSize);
 
-		VCB->magic_num = 4;
+		VCB->magic_num = 3;
 		VCB->total_blocks = numberOfBlocks;
 		VCB->block_size = blockSize;
 		
