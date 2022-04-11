@@ -304,6 +304,12 @@ fdDir * fs_opendir(const char * name){
     printf("Documents[0] = %s\n", currentDir[0].filename);
     printf("Documents[1] = %s\n", currentDir[1].filename);
     printf("%d\n", dir_ent_position);
+
+    
+    strcpy(currentDir[30].filename, "test");
+    strcpy(currentDir[63].filename, "final");
+    
+
     //make a pointer for the directory steam
     dirp = malloc(sizeof(fdDir));
     //always begin at file pos 0 in directory stream
@@ -319,9 +325,41 @@ fdDir * fs_opendir(const char * name){
 //used in displayFiles()
 struct fs_diriteminfo * dirItem;
 struct fs_diriteminfo *fs_readdir(fdDir *dirp){
+    char * temp;
+
     /*every time readdir is called move the dirpointer 
     to the next item in the directory stream*/
-    dirp->dirEntryPosition += 1;
+    printf("**********ReadDir*************\n");
+    if(dirp->dirEntryPosition == 63){
+        return NULL;
+    }
+    if(strcmp(currentDir[dirp->dirEntryPosition].filename, temp)==0 && 
+        strcmp(currentDir[dirp->dirEntryPosition].filename, "")!=0){
+        //temp = currentDir[dirp->dirEntryPosition].filename;
+        dirp->dirEntryPosition +=1;
+        temp = currentDir[dirp->dirEntryPosition].filename;
+        //printf("they match\n");
+    }
+    if(strcmp(currentDir[dirp->dirEntryPosition].filename, "")!=0){
+        //dirp->dirEntryPosition += 1;    
+        //printf("Current: %s | Previous: %s\n", currentDir[dirp->dirEntryPosition].filename,temp);
+        temp = currentDir[dirp->dirEntryPosition].filename;
+        dirp->dirEntryPosition += 1;
+    }
+    else{
+        while(strcmp(currentDir[dirp->dirEntryPosition].filename, "") == 0 &&
+            dirp->dirEntryPosition < 63){
+            //printf("Count: %d, Filename: %s\n", dirp->dirEntryPosition, currentDir[dirp->dirEntryPosition].filename);
+            dirp->dirEntryPosition += 1;
+            temp = currentDir[dirp->dirEntryPosition].filename;
+            //printf("Count: %d, Filename: %s\n", dirp->dirEntryPosition, currentDir[dirp->dirEntryPosition].filename);
+
+        }
+
+    }
+    printf("%s\n", temp);
+    
+    
     //assign filetype
     if(fs_isDir(dirp->filepath)){
         dirItem->fileType = FT_DIRECTORY;

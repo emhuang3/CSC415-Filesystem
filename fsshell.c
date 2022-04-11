@@ -675,7 +675,13 @@ int main (int argc, char * argv[])
 		printf("********************************\n");
 		char * name = "/./home/student/Documents";
 		//parsePath(name);
-		fs_opendir(name);
+		fdDir * x = fs_opendir(name);
+		fs_readdir(x);	//documents
+		fs_readdir(x);	//student
+		fs_readdir(x);	//test
+		fs_readdir(x);	//final
+		fs_readdir(x);
+		close(x);
 		printf("********************************\n");
 		//parse_pathname(name);
 		//********************************
