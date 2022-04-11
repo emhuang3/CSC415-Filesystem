@@ -14,8 +14,9 @@ status = mkdir("/home/cnd/mod1", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 */
 
 dir_entr * dirent;        // this will be used to make a new child directory
-dir_entr * temp_curr_dir; // this will represent parent_dir and be reset at the end of mk_dir()
+dir_entr * temp_curr_dir; // this will represent parent_dir and will be NULL at the end of mk_dir()
 dir_entr * curr_dir;      // this will be kept in memory 
+
 void create_dir(char * name, int permissions) 
 {
     if (dirent == NULL)
