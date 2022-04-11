@@ -248,7 +248,7 @@ int fs_mkdir(const char * pathname, mode_t mode)
         }
     }
 
-    //reset temp  curr working directory
+    //reset temp curr working directory
     free(temp_curr_dir);
     temp_curr_dir = NULL;
 
@@ -262,7 +262,12 @@ int fs_rmdir(const char *pathname)
     //checking if path is valid and if temp curr working dir is directory
     if (ret == 0 && temp_curr_dir[0].is_file == 0)
     {
-        // call realloc_freespace(starting block, byte size)
+        // check that the directory is empty
+
+        /*
+         call realloc_freespace(starting block, byte size) if it is empty 
+         and if permission grant this action
+        */
 
         /*
          this function will only clear relevent meta data of 
