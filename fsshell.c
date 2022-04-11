@@ -679,9 +679,10 @@ int main (int argc, char * argv[])
 		fs_readdir(x);	//Documents
 		fs_readdir(x);	//student
 		fs_readdir(x);	//test
+		fs_readdir(x);	//wulu
 		fs_readdir(x);	//final
 		fs_readdir(x);	//NULL
-		//fs_readdir(x);	//NULL
+		fs_readdir(x);	//NULL
 		//close(x);
 		printf("********************************\n");
 		//parse_pathname(name);

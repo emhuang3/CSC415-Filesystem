@@ -307,6 +307,7 @@ fdDir * fs_opendir(const char * name){
 
     //********test***************
     strcpy(currentDir[30].filename, "test");
+    strcpy(currentDir[31].filename, "wulu");
     strcpy(currentDir[63].filename, "final");
     //********test***************
     
@@ -324,61 +325,48 @@ fdDir * fs_opendir(const char * name){
 }
 
 //used in displayFiles()
-struct fs_diriteminfo dirItem;
+struct fs_diriteminfo * dirItem;
 struct fs_diriteminfo *fs_readdir(fdDir *dirp){
-    //printf("**********ReadDir*************\n");
-    //dirItem.fileType = FT_DIRECTORY;
 
-    char * temp;
-
+    dirItem = malloc(sizeof(struct fs_diriteminfo));
     
     printf("**********ReadDir*************\n");
     //assign filetype
     if(fs_isDir(dirp->filepath)){
-        dirItem.fileType = FT_DIRECTORY;
+        dirItem->fileType = FT_DIRECTORY;
     }
     if(fs_isFile(dirp->filepath)){
-        dirItem.fileType = FT_REGFILE;
+        dirItem->fileType = FT_REGFILE;
     }
 
-    /*every time readdir is called move the dirpointer 
-    to the next item in the directory stream*/
-    if(dirp->dirEntryPosition == 63){
-        return NULL;
+    if(dirp->dirEntryPosition >=63){
+        strcpy(dirItem->d_name, "");
     }
-    else if(strcmp(currentDir[dirp->dirEntryPosition].filename, dirItem.d_name)==0 && 
-        strcmp(currentDir[dirp->dirEntryPosition].filename, "")!=0){
-        
-        dirp->dirEntryPosition +=1;
-        strcpy(dirItem.d_name, currentDir[dirp->dirEntryPosition].filename);
-        //printf("they match\n");
+    else if(strcmp(currentDir[dirp->dirEntryPosition].filename, "")!=0){
+       strcpy(dirItem->d_name, currentDir[dirp->dirEntryPosition].filename);
+       printf("File: %s | Position: %d\n", dirItem->d_name, dirp->dirEntryPosition);
+       dirp->dirEntryPosition += 1;
     }
-    if(strcmp(currentDir[dirp->dirEntryPosition].filename, "")!=0){
-           
-        //printf("Current: %s | Previous: %s\n", currentDir[dirp->dirEntryPosition].filename,temp);
-        strcpy(dirItem.d_name, currentDir[dirp->dirEntryPosition].filename);
-        //temp = currentDir[dirp->dirEntryPosition].filename;
+    else if(strcmp(currentDir[dirp->dirEntryPosition].filename, "")==0){
+        while(strcmp(currentDir[dirp->dirEntryPosition].filename, "")==0){
+            dirp->dirEntryPosition += 1;
+            strcpy(dirItem->d_name, currentDir[dirp->dirEntryPosition].filename);
+            
+        }
+        printf("File: %s | Position: %d\n", dirItem->d_name, dirp->dirEntryPosition);
         dirp->dirEntryPosition += 1;
     }
-    else{
-        while(strcmp(currentDir[dirp->dirEntryPosition].filename, "") == 0 &&
-            dirp->dirEntryPosition < 63){
-            dirp->dirEntryPosition += 1;
-            strcpy(dirItem.d_name, currentDir[dirp->dirEntryPosition].filename);
-
-        }
-
-    }
-    printf("%s\n", dirItem.d_name);
-
-   
+    
+    return dirItem;
 }
 
 //used in displayFiles()
 int fs_closedir(fdDir *dirp){
     //frees up the memory you allocated for opendir
     free(currentDir);
+    currentDir = NULL;
     free(dirp);
+    dirp = NULL;
     //free(dirItem);
     return 0;
 }
