@@ -85,16 +85,17 @@ int validate_path(char * name) {
     {
         curr_dir = malloc(VCB->block_size*6);
         temp_curr_dir = malloc(VCB->block_size*6);
-        temp_curr_dir = curr_dir;
+        memcpy(temp_curr_dir, curr_dir, sizeof(curr_dir));
 
         // starting from root directory
+        LBAread(curr_dir, 6, VCB->root_start);
         LBAread(temp_curr_dir, 6, VCB->root_start);
     }
     
-    else
+    else if (temp_curr_dir == NULL)
     {
         temp_curr_dir = malloc(VCB->block_size*6);
-        temp_curr_dir = curr_dir;
+        memcpy(temp_curr_dir, curr_dir, sizeof(curr_dir));
 
         // starting from the current working directory
         LBAread(temp_curr_dir, 6, curr_dir[0].starting_block);
@@ -120,7 +121,7 @@ int validate_path(char * name) {
 
             // updating current directory with found path
             LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
-            LBAread(curr_dir, 6, temp_curr_dir[i].starting_block);
+            // LBAread(curr_dir, 6, temp_curr_dir[i].starting_block);
 
             printf("Current directory: %s\n\n", curr_dir[0].filename);
             return -1;
@@ -128,7 +129,7 @@ int validate_path(char * name) {
         else if (i == 63 && num_of_paths > 0)
         {
             // this else-container implies that path was not found while there are still paths left to search
-            printf("path does not exist\n");
+            printf("path %s does not exist in %s Directory\n", name, temp_curr_dir[0].filename);
             printf("NOT able to create this directory\n");
 
             return -1;
@@ -139,6 +140,7 @@ int validate_path(char * name) {
             printf("able to create this directory\n");
 
             // save name
+            memset(saved_filename,0, sizeof(saved_filename));
             strncpy(saved_filename, name, strlen(name));
             // saved_filename = name;
             return 0;
@@ -150,9 +152,10 @@ int validate_path(char * name) {
 int parse_pathname(const char * pathname)
 {
     char count_slashes[20];
+    char * buffer_pathname = strdup(pathname);
     
     strncpy(count_slashes, pathname, strlen(pathname));
-    char * buffer_pathname = strdup(pathname);
+    // strncpy(buffer_pathname, pathname, strlen(pathname));
 
     printf("buffer_pathname: %s\n", buffer_pathname);
 
@@ -190,6 +193,8 @@ int parse_pathname(const char * pathname)
         name = strtok(NULL, "/");
     }
 
+    // memset(buffer_pathname, 0, sizeof(buffer_pathname));
+
     return ret;
 }
 
@@ -218,12 +223,8 @@ int fs_mkdir(const char * pathname, mode_t mode)
 
                 // update current directory on disk
                 LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
-
-                // reset current working directory if needed
-                free(temp_curr_dir);
-                temp_curr_dir = NULL;
                 
-                break;
+                i = 64;
             }
             else if (i == 63)
             {
@@ -231,12 +232,11 @@ int fs_mkdir(const char * pathname, mode_t mode)
             }
         }
     }
-    else 
-    {
-        //reset current working directory
-        free(temp_curr_dir);
-        temp_curr_dir = NULL;
-    }
+
+    //reset current working directory
+    free(temp_curr_dir);
+    temp_curr_dir = NULL;
+
     return ret;
 }
 
@@ -254,6 +254,8 @@ int load_Dir(char * token){
             dir_ent_position = i;
             printf("MATCH token : %s\n", token);
             LBAread(currentDir, 6, currentDir[i].starting_block);
+            //found so reset i to 0 and set currentDir 
+            //printf("%s\n", currentDir->filename);
             break;
         }
         else if(i ==63){
@@ -264,6 +266,7 @@ int load_Dir(char * token){
     
 }
 
+//parsePath for opendir ret
 int parsePath(const char * pathname){
     //first load the entire root directory
     currentDir = malloc(512*6);
@@ -296,15 +299,18 @@ fdDir * fs_opendir(const char * name){
     if(dir_ent_position == -1){
         printf("File path does not exist.\n");
     }
-    
+    printf("Destination: %s\n", currentDir->filename);
+    printf("The starting block of the file: %d\n", currentDir->starting_block);
+    printf("Documents[0] = %s\n", currentDir[0].filename);
+    printf("Documents[1] = %s\n", currentDir[1].filename);
     printf("%d\n", dir_ent_position);
     //make a pointer for the directory steam
     dirp = malloc(sizeof(fdDir));
     //always begin at file pos 0 in directory stream
-    dirp->dirEntryPosition = dir_ent_position;
+    dirp->dirEntryPosition = 0;
     //Location of the directory in relation to the LBA
-    dirp->directoryStartLocation = currentDir[dir_ent_position].starting_block;
-    printf("%s\n", currentDir[dir_ent_position].filename);
+    dirp->directoryStartLocation = currentDir->starting_block;
+    //printf("%s\n", currentDir[dir_ent_position].filename);
     // //file path
     // strcpy(dirp->filepath, name);
     return dirp;

@@ -93,6 +93,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		// cur_dir = NULL;
 
 		// fs_mkdir("/home/Documents", 707);
+		
 	}
 		
 		return 0;

@@ -671,6 +671,14 @@ int main (int argc, char * argv[])
 	while (1)
 		{
 		cmdin = readline("Prompt > ");
+		//*******************************
+		printf("********************************\n");
+		char * name = "/./home/student/Documents";
+		//parsePath(name);
+		fs_opendir(name);
+		printf("********************************\n");
+		//parse_pathname(name);
+		//********************************
 #ifdef COMMAND_DEBUG
 		printf ("%s\n", cmdin);
 #endif
