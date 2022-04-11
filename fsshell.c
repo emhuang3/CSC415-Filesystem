@@ -672,19 +672,19 @@ int main (int argc, char * argv[])
 		{
 		cmdin = readline("Prompt > ");
 		//*******************************
-		printf("********************************\n");
-		char * name = "/./home/student/Documents";
-		//parsePath(name);
-		fdDir * x = fs_opendir(name);
-		fs_readdir(x);	//Documents
-		fs_readdir(x);	//student
-		fs_readdir(x);	//test
-		fs_readdir(x);	//wulu
-		fs_readdir(x);	//final
-		fs_readdir(x);	//NULL
-		fs_readdir(x);	//NULL
-		//close(x);
-		printf("********************************\n");
+		// printf("********************************\n");
+		// char * name = "/./home/student/Documents";
+		// parsePath(name);
+		// fdDir * x = fs_opendir(name);
+		// fs_readdir(x);	//Documents
+		// fs_readdir(x);	//student
+		// fs_readdir(x);	//test
+		// fs_readdir(x);	//wulu
+		// fs_readdir(x);	//final
+		// fs_readdir(x);	//NULL
+		// fs_readdir(x);	//NULL
+		// close(x);
+		//printf("********************************\n");
 		//parse_pathname(name);
 		//********************************
 #ifdef COMMAND_DEBUG

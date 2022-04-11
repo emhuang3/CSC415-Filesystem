@@ -299,16 +299,16 @@ fdDir * fs_opendir(const char * name){
     if(dir_ent_position == -1){
         printf("File path does not exist.\n");
     }
-    printf("Destination: %s\n", currentDir->filename);
-    printf("The starting block of the file: %d\n", currentDir->starting_block);
-    printf("Documents[0] = %s\n", currentDir[0].filename);
-    printf("Documents[1] = %s\n", currentDir[1].filename);
-    printf("%d\n", dir_ent_position);
+    // printf("Destination: %s\n", currentDir->filename);
+    // printf("The starting block of the file: %d\n", currentDir->starting_block);
+    // printf("Documents[0] = %s\n", currentDir[0].filename);
+    // printf("Documents[1] = %s\n", currentDir[1].filename);
+    // printf("%d\n", dir_ent_position);
 
     //********test***************
-    strcpy(currentDir[30].filename, "test");
-    strcpy(currentDir[31].filename, "wulu");
-    strcpy(currentDir[63].filename, "final");
+    //strcpy(currentDir[30].filename, "test");
+    //strcpy(currentDir[31].filename, "wulu");
+    //strcpy(currentDir[63].filename, "final");
     //********test***************
     
 
@@ -330,7 +330,7 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
 
     dirItem = malloc(sizeof(struct fs_diriteminfo));
     
-    printf("**********ReadDir*************\n");
+    //printf("**********ReadDir*************\n");
     //assign filetype
     if(fs_isDir(dirp->filepath)){
         dirItem->fileType = FT_DIRECTORY;
@@ -339,21 +339,24 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
         dirItem->fileType = FT_REGFILE;
     }
 
-    if(dirp->dirEntryPosition >=63){
-        strcpy(dirItem->d_name, "");
+    if(dirp->dirEntryPosition >=64){
+        return NULL;
+        //printf("File: %s | Position: %d\n", dirItem->d_name, dirp->dirEntryPosition);
     }
     else if(strcmp(currentDir[dirp->dirEntryPosition].filename, "")!=0){
        strcpy(dirItem->d_name, currentDir[dirp->dirEntryPosition].filename);
-       printf("File: %s | Position: %d\n", dirItem->d_name, dirp->dirEntryPosition);
+       //printf("File: %s | Position: %d\n", dirItem->d_name, dirp->dirEntryPosition);
        dirp->dirEntryPosition += 1;
     }
     else if(strcmp(currentDir[dirp->dirEntryPosition].filename, "")==0){
-        while(strcmp(currentDir[dirp->dirEntryPosition].filename, "")==0){
+        while(strcmp(currentDir[dirp->dirEntryPosition].filename, "")==0 && 
+            dirp->dirEntryPosition <63){
+
             dirp->dirEntryPosition += 1;
             strcpy(dirItem->d_name, currentDir[dirp->dirEntryPosition].filename);
             
         }
-        printf("File: %s | Position: %d\n", dirItem->d_name, dirp->dirEntryPosition);
+        //printf("File: %s | Position: %d\n", dirItem->d_name, dirp->dirEntryPosition);
         dirp->dirEntryPosition += 1;
     }
     
@@ -367,7 +370,8 @@ int fs_closedir(fdDir *dirp){
     currentDir = NULL;
     free(dirp);
     dirp = NULL;
-    //free(dirItem);
+    free(dirItem);
+    dirItem = NULL;
     return 0;
 }
 
