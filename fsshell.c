@@ -42,7 +42,7 @@
 #define DIRMAX_LEN		4096
 
 /****   SET THESE TO 1 WHEN READY TO TEST THAT COMMAND ****/
-#define CMDLS_ON	0
+#define CMDLS_ON	1
 #define CMDCP_ON	0
 #define CMDMV_ON	0
 #define CMDMD_ON	1
@@ -676,12 +676,13 @@ int main (int argc, char * argv[])
 		char * name = "/./home/student/Documents";
 		//parsePath(name);
 		fdDir * x = fs_opendir(name);
-		fs_readdir(x);	//documents
+		fs_readdir(x);	//Documents
 		fs_readdir(x);	//student
 		fs_readdir(x);	//test
 		fs_readdir(x);	//final
-		fs_readdir(x);
-		close(x);
+		fs_readdir(x);	//NULL
+		//fs_readdir(x);	//NULL
+		//close(x);
 		printf("********************************\n");
 		//parse_pathname(name);
 		//********************************

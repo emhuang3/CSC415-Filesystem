@@ -305,9 +305,10 @@ fdDir * fs_opendir(const char * name){
     printf("Documents[1] = %s\n", currentDir[1].filename);
     printf("%d\n", dir_ent_position);
 
-    
+    //********test***************
     strcpy(currentDir[30].filename, "test");
     strcpy(currentDir[63].filename, "final");
+    //********test***************
     
 
     //make a pointer for the directory steam
@@ -323,50 +324,54 @@ fdDir * fs_opendir(const char * name){
 }
 
 //used in displayFiles()
-struct fs_diriteminfo * dirItem;
+struct fs_diriteminfo dirItem;
 struct fs_diriteminfo *fs_readdir(fdDir *dirp){
+    //printf("**********ReadDir*************\n");
+    //dirItem.fileType = FT_DIRECTORY;
+
     char * temp;
+
+    
+    printf("**********ReadDir*************\n");
+    //assign filetype
+    if(fs_isDir(dirp->filepath)){
+        dirItem.fileType = FT_DIRECTORY;
+    }
+    if(fs_isFile(dirp->filepath)){
+        dirItem.fileType = FT_REGFILE;
+    }
 
     /*every time readdir is called move the dirpointer 
     to the next item in the directory stream*/
-    printf("**********ReadDir*************\n");
     if(dirp->dirEntryPosition == 63){
         return NULL;
     }
-    if(strcmp(currentDir[dirp->dirEntryPosition].filename, temp)==0 && 
+    else if(strcmp(currentDir[dirp->dirEntryPosition].filename, dirItem.d_name)==0 && 
         strcmp(currentDir[dirp->dirEntryPosition].filename, "")!=0){
-        //temp = currentDir[dirp->dirEntryPosition].filename;
+        
         dirp->dirEntryPosition +=1;
-        temp = currentDir[dirp->dirEntryPosition].filename;
+        strcpy(dirItem.d_name, currentDir[dirp->dirEntryPosition].filename);
         //printf("they match\n");
     }
     if(strcmp(currentDir[dirp->dirEntryPosition].filename, "")!=0){
-        //dirp->dirEntryPosition += 1;    
+           
         //printf("Current: %s | Previous: %s\n", currentDir[dirp->dirEntryPosition].filename,temp);
-        temp = currentDir[dirp->dirEntryPosition].filename;
+        strcpy(dirItem.d_name, currentDir[dirp->dirEntryPosition].filename);
+        //temp = currentDir[dirp->dirEntryPosition].filename;
         dirp->dirEntryPosition += 1;
     }
     else{
         while(strcmp(currentDir[dirp->dirEntryPosition].filename, "") == 0 &&
             dirp->dirEntryPosition < 63){
-            //printf("Count: %d, Filename: %s\n", dirp->dirEntryPosition, currentDir[dirp->dirEntryPosition].filename);
             dirp->dirEntryPosition += 1;
-            temp = currentDir[dirp->dirEntryPosition].filename;
-            //printf("Count: %d, Filename: %s\n", dirp->dirEntryPosition, currentDir[dirp->dirEntryPosition].filename);
+            strcpy(dirItem.d_name, currentDir[dirp->dirEntryPosition].filename);
 
         }
 
     }
-    printf("%s\n", temp);
-    
-    
-    //assign filetype
-    if(fs_isDir(dirp->filepath)){
-        dirItem->fileType = FT_DIRECTORY;
-    }
-    if(fs_isFile(dirp->filepath)){
-        dirItem->fileType = FT_REGFILE;
-    }
+    printf("%s\n", dirItem.d_name);
+
+   
 }
 
 //used in displayFiles()
@@ -374,7 +379,7 @@ int fs_closedir(fdDir *dirp){
     //frees up the memory you allocated for opendir
     free(currentDir);
     free(dirp);
-    free(dirItem);
+    //free(dirItem);
     return 0;
 }
 
@@ -390,6 +395,6 @@ int fs_isDir(char * path){
     return 1;
 }
 
-// int fs_stat(const char *path, struct fs_stat *buf){
+int fs_stat(const char *path, struct fs_stat *buf){
     
-// }
+}
