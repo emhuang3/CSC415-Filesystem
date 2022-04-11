@@ -210,14 +210,12 @@ int parse_pathname(const char * pathname)
         name = strtok(NULL, "/");
     }
 
-    // memset(buffer_pathname, 0, sizeof(buffer_pathname));
-
     return ret;
 }
 
 int fs_mkdir(const char * pathname, mode_t mode) 
 {
-    // will return -1  if invalid, and 0 if success
+    // will return -1 if path is invalid, and 0 if it is a hit
     int ret = parse_pathname(pathname);
 
     if (ret == -1 && num_of_paths == 0)
@@ -250,7 +248,7 @@ int fs_mkdir(const char * pathname, mode_t mode)
         }
     }
 
-    //reset current working directory
+    //reset temp  curr working directory
     free(temp_curr_dir);
     temp_curr_dir = NULL;
 
@@ -259,5 +257,28 @@ int fs_mkdir(const char * pathname, mode_t mode)
 
 int fs_rmdir(const char *pathname) 
 {
+    int ret = parse_pathname(pathname);
 
+    //checking if path is valid and if temp curr working dir is directory
+    if (ret == 0 && temp_curr_dir[0].is_file == 0)
+    {
+        // call realloc_freespace(starting block, byte size)
+
+        /*
+         this function will only clear relevent meta data of 
+         initial block, marking the rest of the previously allocated
+         blocks as free to overwrite.
+         */
+
+        // directory will be updated as free to overwrite and written to disk
+
+        // freespace bitmap will be updated and written to disk
+
+        // VCB->first_free_block will be updated and written to disk
+
+        /*
+         create a move function to use with allocate_space() to move 
+         files/directory to the end of there respective regions
+        */ 
+    }
 }
