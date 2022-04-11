@@ -76,7 +76,7 @@ char saved_filename[20];
 int ret;
 int num_of_paths;
 
-// to be called in parse_path(). This function will update current working directory
+// to be called in parse_path(). This function will update temp current working directory
 int validate_path(char * name) {
     // return -1 if it exits, and 0 if it does not.
 
