@@ -84,7 +84,7 @@ int allocate_space(int amount_to_alloc)
 		}
 		else if (i == VCB->total_blocks - 1) // implies their is no free space left.
 		{
-			printf("no more space available\n");
+			printf("ERROR: no more space available on disk\n");
 		}
 	}
 	printf("\n");
@@ -98,7 +98,7 @@ int allocate_space(int amount_to_alloc)
 	return previous_free_block_start;
 }
 
-void init_bitmap(int numOfBlocks, uint64_t blockSize)
+void init_bitmap()
 {
 
 	int first_free_block = 0;
@@ -106,7 +106,7 @@ void init_bitmap(int numOfBlocks, uint64_t blockSize)
 	// creating bitmap for free space for the first time
 	if (buffer_bitmap == NULL)
 	{
-		buffer_bitmap = malloc(sizeof(buffer_bitmap) * numOfBlocks);
+		buffer_bitmap = malloc(sizeof(buffer_bitmap) * VCB->total_blocks);
 	}
 
 	//initializing dedicated block space for VCB and freespace bitmap
@@ -117,5 +117,39 @@ void init_bitmap(int numOfBlocks, uint64_t blockSize)
 
 	LBAwrite(buffer_bitmap, 5, 1);
 
-	update_free_block_start(numOfBlocks);
+	update_free_block_start();
+}
+
+int reallocate_space(dir_entr * directory)
+{
+	// get num of blocks this directory occupies
+	int count = ceil(directory[0].size/512);
+	
+	// update bitmap buffer
+	if (buffer_bitmap == NULL)
+	{
+		buffer_bitmap = malloc(sizeof(buffer_bitmap) * VCB->total_blocks);
+		LBAread(buffer_bitmap, 5, 1);
+	}
+
+	printf("Blocks freed: ");
+	for (int i = directory[0].starting_block; i < directory[0].starting_block + count; i++)
+	{
+		buffer_bitmap[i] = 0;
+		printf("%d ", i);
+	}
+	printf("\n");
+
+	LBAwrite(buffer_bitmap, 5, 1);
+
+	// updating free block start in VCB
+	update_free_block_start();
+
+	/*
+	 metadata in index 0 & 1 does not need to be updated 
+	 since those will be overwritten anyways as they are
+	 marked free to overwrite by freespace reallocation.
+	*/
+
+	return 0;
 }

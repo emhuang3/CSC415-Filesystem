@@ -13,63 +13,63 @@ example of make dir with permissions
 status = mkdir("/home/cnd/mod1", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 */
 
-dir_entr * dirent;        // this will be used to make a new child directory
-dir_entr * temp_curr_dir; // this will represent parent_dir and will be NULL at the end of mk_dir()
-dir_entr * curr_dir;      // this will be kept in memory 
+dir_entr * temp_dir;      // this is a temp dir for making/removing directories
+dir_entr * temp_curr_dir; // this will represent a temp pointer for pathname validation and directory manipulation
+dir_entr * curr_dir;      // this will be kept in memory as a pointer to a current working directory
 
 void create_dir(char * name, int permissions) 
 {
-    if (dirent == NULL)
+    if (temp_dir == NULL)
     {
-        dirent = malloc(VCB->block_size*6);
+        temp_dir = malloc(VCB->block_size*6);
     }
     
-    strncpy(dirent[0].filename, name, strlen(name));
+    strncpy(temp_dir[0].filename, name, strlen(name));
 
     // these two will lines will always be true so no need to put them in if statments
-    dirent[0].size = dirent[1].size = sizeof(dir_entr) * 64;
-	dirent[0].is_file = dirent[1].is_file = 0;
+    temp_dir[0].size = temp_dir[1].size = sizeof(dir_entr) * 64;
+	temp_dir[0].is_file = temp_dir[1].is_file = 0;
 
     // if root
-    if (strcmp(dirent[0].filename, ".") == 0)
+    if (strcmp(temp_dir[0].filename, ".") == 0)
     {
-        VCB->root_start = dirent[0].starting_block = 
-        dirent[1].starting_block = allocate_space(5);
-        dirent[0].permissions = dirent[1].permissions = permissions;
-        strncpy(dirent[1].filename, "..", 2);
+        VCB->root_start = temp_dir[0].starting_block = 
+        temp_dir[1].starting_block = allocate_space(5);
+        temp_dir[0].permissions = temp_dir[1].permissions = permissions;
+        strncpy(temp_dir[1].filename, "..", 2);
         printf("------------CREATED ROOT DIRECTORY------------\n");
     }
     else // if not root
     {
-        dirent[0].starting_block = allocate_space(5);
-        dirent[1].starting_block = temp_curr_dir->starting_block;
-        dirent[0].permissions = permissions;
-        dirent[1].permissions = temp_curr_dir->permissions;
-        strncpy(dirent[1].filename, temp_curr_dir->filename, strlen(temp_curr_dir->filename));
+        temp_dir[0].starting_block = allocate_space(5);
+        temp_dir[1].starting_block = temp_curr_dir->starting_block;
+        temp_dir[0].permissions = permissions;
+        temp_dir[1].permissions = temp_curr_dir->permissions;
+        strncpy(temp_dir[1].filename, temp_curr_dir->filename, strlen(temp_curr_dir->filename));
         printf("------------CREATED NEW DIRECTORY------------\n");
     }
 
-    printf("Size of dir: %d \n", dirent[0].size);
-	printf("dir[0].starting_block : %d \n", dirent[0].starting_block);
-    printf("dir[1].starting_block : %d \n", dirent[1].starting_block);
-	printf("dir[0].filename : %s \n", dirent[0].filename);
-	printf("dir[1].filename : %s \n", dirent[1].filename);
-    printf("dir[0].permissions : %d \n", dirent[0].permissions);
-    printf("dir[1].permissions : %d \n\n", dirent[1].permissions);
+    printf("Size of dir: %d \n", temp_dir[0].size);
+	printf("dir[0].starting_block : %d \n", temp_dir[0].starting_block);
+    printf("dir[1].starting_block : %d \n", temp_dir[1].starting_block);
+	printf("dir[0].filename : %s \n", temp_dir[0].filename);
+	printf("dir[1].filename : %s \n", temp_dir[1].filename);
+    printf("dir[0].permissions : %d \n", temp_dir[0].permissions);
+    printf("dir[1].permissions : %d \n\n", temp_dir[1].permissions);
 
 
     for (int i = 2; i < 64; i++)
 	{
 		// empty filename will imply that it is free to write to
-		strncpy(dirent[i].filename, "", 0);
+		strncpy(temp_dir[i].filename, "", 0);
 	}
 
-    LBAwrite(dirent, 6, dirent[0].starting_block);
+    LBAwrite(temp_dir, 6, temp_dir[0].starting_block);
 
 	LBAwrite(VCB, 1, 0);
 
-    free(dirent);
-	dirent = NULL;
+    free(temp_dir);
+	temp_dir = NULL;
 }
 
 char saved_filename[20];
@@ -162,14 +162,35 @@ int parse_pathname(const char * pathname)
 
     printf("buffer_pathname: %s\n", buffer_pathname);
 
+    //check that beginning of pathname is '\'
+    if (count_slashes[0] != '\\')
+    {
+        printf("ERROR: path must begin with '\\'\n\n");
+        return -1;
+    }
+    
     // counting forward slashes to determine num of input
     for (int i = 0; i < strlen(count_slashes); i++)
     {
-        if (count_slashes[i] == '/')
+        if (count_slashes[i] == '\\' && i == strlen(count_slashes) - 1)
+        {
+            printf("ERROR: empty head path after '\\'\n\n");
+            return -1;
+        }
+
+        else if (count_slashes[i] == '\\' && count_slashes[i + 1] == '\\')
+        {
+            printf("ERROR: invalid double '\\'\n\n");
+            return -1;
+        }
+
+        else if (count_slashes[i] == '\\')
         {
             num_of_paths++;
         }
     }
+
+    memset(count_slashes, 0, sizeof(count_slashes));
 
     printf("num of paths: %d\n", num_of_paths);
 
@@ -181,7 +202,7 @@ int parse_pathname(const char * pathname)
     } 
 
     // call str_tok to divide pathname into tokens
-    char * name = strtok(buffer_pathname, "/");
+    char * name = strtok(buffer_pathname, "\\");
     
     while (name != NULL)
     {
@@ -194,7 +215,7 @@ int parse_pathname(const char * pathname)
             return ret;
         }
 
-        name = strtok(NULL, "/");
+        name = strtok(NULL, "\\");
     }
 
     return ret;
@@ -208,29 +229,30 @@ int fs_mkdir(const char * pathname, mode_t mode)
     if (ret == -1 && num_of_paths == 0)
     {
 
-        //searching for a free directory entry to write to in current directory
+        //searching for a free directory entry to write to in temp current directory
         for (int i = 2; i < 64; i++)
         {
             if (strcmp(temp_curr_dir[i].filename, "") == 0)
             {
-                //creating new directory
+                //adding to entry in parent directory
                 strncpy(temp_curr_dir[i].filename, saved_filename, strlen(saved_filename));
                 temp_curr_dir[i].starting_block = VCB->free_block_start;
-
-                printf("Current Directory: %s\n", temp_curr_dir[0].filename);
-                printf("%s added to index %d in %s Directory\n", temp_curr_dir[i].filename, i, temp_curr_dir[0].filename);
-                printf("%s starting block: %d\n\n", temp_curr_dir[i].filename, VCB->free_block_start);
-
+                temp_curr_dir[i].permissions = mode;
+                temp_curr_dir[i].size = 3072; // size will always start here and then dynamically grow when entries fill up
+               
+                // creating the child directory
                 create_dir(saved_filename, mode);
 
                 // update current directory on disk
                 LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
-                
+                ret = 0;
                 i = 64;
             }
             else if (i == 63)
             {
                 printf("Unable to find free directory entry inside /%s\n", temp_curr_dir[0].filename);
+
+                // ------------- later should add a function to grow num of entries if full ----------- //
             }
         }
     }
@@ -246,31 +268,90 @@ int fs_rmdir(const char *pathname)
 {
     int ret = parse_pathname(pathname);
 
+    //checking that this directory is not root
+    if (strcmp(temp_curr_dir[0].filename, ".") == 0)
+    {
+        ret = -1;
+        printf("ERROR: cannot remove root directory.\n");
+    }
+
     //checking if path is valid and if temp curr working dir is directory
-    if (ret == 0 && temp_curr_dir[0].is_file == 0)
+    if (ret == 0)
     {
         // check that the directory is empty
-
-        /*
-         call realloc_freespace(starting block, byte size) if it is empty 
-         and if permission grant this action
-        */
+        for (int i = 2; i < 64; i++)
+        {
+            if (strcmp(temp_curr_dir[i].filename, "") != 0)
+            {
+                ret = -1;
+                printf("ERROR: directory is not empty.\n");
+                i = 64;
+            }
+        }
 
         /*
          this function will only clear relevent meta data of 
-         initial block, marking the rest of the previously allocated
-         blocks as free to overwrite.
-         */
+         initial block, marking the previously allocated
+         blocks as free to write to.
+        */
 
-        // directory will be updated as free to overwrite and written to disk
+        if (ret == 0)
+        {   
+            // free dir entry from parent
+            temp_dir = malloc(VCB->block_size*6);
+            LBAread(temp_dir, 6, temp_curr_dir[1].starting_block);
 
-        // freespace bitmap will be updated and written to disk
+            //looking for this directory in parent directory, then erasing it
+            for (int i = 2; i < 64; i++)
+            {
+                if (strcmp(temp_dir[i].filename, temp_curr_dir[0].filename) == 0)
+                {
+                    printf("found child [%s] in parent [%s] at index %d.\n", 
+                    temp_curr_dir[0].filename, temp_dir[i].filename, i);
 
-        // VCB->first_free_block will be updated and written to disk
+                    // clear metadata in parent
+                    memset(temp_dir[i].filename, 0, sizeof(temp_dir[i].filename));
+                    temp_dir[i].permissions = 0;
+                    temp_dir[i].size = 0;
+                    temp_dir[i].starting_block = 0;
 
-        /*
-         create a move function to use with allocate_space() to move 
-         files/directory to the end of there respective regions
-        */ 
+                    i = 64;
+                }
+
+                else if (i == 63)
+                {
+                    ret = -1;
+                    printf("ERROR: cannot find child [%s] in parent [%s].\n", 
+                    temp_curr_dir[0].filename, temp_dir[i].filename);
+                }
+                
+            }
+            
+            if (ret == 0)
+            {
+                // free up space in freespace bitmap
+                ret = reallocate_space(temp_curr_dir);
+            }
+        }
+
+        // update parent directory to disk (i.e. temp_dir).
+        if (ret = 0)
+        {
+            LBAwrite(temp_dir, 6, temp_dir[0].starting_block);
+            printf("-- updated disk --\n\n");
+        }
+        else
+        {
+
+            printf("fatal error: -- did not update disk --\n\n");
+        }
     }
+
+    free(temp_dir);
+    temp_dir = NULL;
+
+    free(temp_curr_dir);
+    temp_curr_dir = NULL;
+
+    return ret;
 }
