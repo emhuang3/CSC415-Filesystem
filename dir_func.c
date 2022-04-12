@@ -337,7 +337,7 @@ int fs_rmdir(const char *pathname)
                 if (strcmp(temp_dir[i].filename, temp_curr_dir[0].filename) == 0)
                 {
                     printf("found child [%s] in parent [%s] at index %d.\n", 
-                    temp_curr_dir[0].filename, temp_dir[i].filename, i);
+                    temp_curr_dir[0].filename, temp_dir[0].filename, i);
 
                     // clearing filename in parent will mark this entry as free to write to
                     memset(temp_dir[i].filename, 0, sizeof(temp_dir[i].filename));
@@ -352,7 +352,7 @@ int fs_rmdir(const char *pathname)
                 {
                     ret = -1;
                     printf("ERROR: cannot find child [%s] in parent [%s].\n", 
-                    temp_curr_dir[0].filename, temp_dir[i].filename);
+                    temp_curr_dir[0].filename, temp_dir[0].filename);
                 }
             }
         }
@@ -383,7 +383,6 @@ int fs_rmdir(const char *pathname)
 int fs_isDir(char * path){
     int ret = parse_pathname(path); 
 
-    printf("ret: %d\n", ret);
     printf("is_file: %d\n", temp_curr_dir[0].is_file);
 
     if(ret == 0){

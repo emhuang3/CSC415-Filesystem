@@ -84,11 +84,11 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	
 	//checking if magic number is a match
-	if (VCB->magic_num != 3)
+	if (VCB->magic_num != 4)
 	{
 		flush_blocks(numberOfBlocks, blockSize);
 
-		VCB->magic_num = 3;
+		VCB->magic_num = 4;
 		VCB->total_blocks = numberOfBlocks;
 		VCB->block_size = blockSize;
 		
@@ -98,21 +98,21 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		// --------- INIT ROOT DIRECTORY ---------- //
 
 		create_dir(".", 700);
-
-		// setting current working directory to root
-		curr_dir = malloc(VCB->block_size * 6);
-		
-		// checking if malloc was successful
-		if (curr_dir == NULL)
-		{
-			printf("ERROR: failed to malloc.\n");
-			exit(-1);
-		}
-
-		LBAread(curr_dir, 6, VCB->root_start);
 	}
+
+	// setting current working directory to root
+	curr_dir = malloc(VCB->block_size * 6);
 		
-		return 0;
+	// checking if malloc was successful
+	if (curr_dir == NULL)
+	{
+		printf("ERROR: failed to malloc.\n");
+		exit(-1);
+	}
+
+	LBAread(curr_dir, 6, VCB->root_start);
+		
+	return 0;
 }
 	
 	
