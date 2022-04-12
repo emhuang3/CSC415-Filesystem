@@ -361,7 +361,7 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
             }
             
         }
-        //printf("File: %s | Position: %d\n", dirItem->d_name, dirp->dirEntryPosition);
+        
         dirp->dirEntryPosition += 1;
     }
     
@@ -392,15 +392,19 @@ int fs_isDir(char * path){
     return 1;
 }
 
+//everything except block size seems to be optional
 int fs_stat(const char *path, struct fs_stat *buf){
-    //parsePath(path);
-    //printf(currentDir->filename);
-    buf->st_size = sizeof(dir_entr);
     // off_t     st_size;    		/* total size, in bytes */
+    buf->st_size = sizeof(dir_entr) * 64;
 	// blksize_t st_blksize; 		/* blocksize for file system I/O */
+    buf->st_blksize = 512;
 	// blkcnt_t  st_blocks;  		/* number of 512B blocks allocated */
+    buf->st_blocks = 6;
 	// time_t    st_accesstime;   	/* time of last access */
+
 	// time_t    st_modtime;   	/* time of last modification */
+
 	// time_t    st_createtime;   	/* time of last status change */
+
     return 0;
 }
