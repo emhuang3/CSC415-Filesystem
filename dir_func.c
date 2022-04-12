@@ -82,24 +82,11 @@ int validate_path(char * name) {
 
     // this represents the paths remaining to be searched
     num_of_paths--;
-
-    // init current working directory if it is NULL
-    if (curr_dir == NULL)
-    {
-        curr_dir = malloc(VCB->block_size*6);
-        temp_curr_dir = malloc(VCB->block_size*6);
-        memcpy(temp_curr_dir, curr_dir, sizeof(curr_dir));
-
-        // starting temp and current working directory from root directory
-        LBAread(curr_dir, 6, VCB->root_start);
-        LBAread(temp_curr_dir, 6, VCB->root_start);
-    }
     
     // init temp current working directory if NULL
-    else if (temp_curr_dir == NULL)
+    if (temp_curr_dir == NULL)
     {
-        temp_curr_dir = malloc(VCB->block_size*6);
-        memcpy(temp_curr_dir, curr_dir, sizeof(curr_dir));
+        temp_curr_dir = malloc(VCB->block_size * 6);
 
         // starting temp from the current working directory
         LBAread(temp_curr_dir, 6, curr_dir[0].starting_block);
@@ -120,7 +107,7 @@ int validate_path(char * name) {
             // updating temp with found path
             LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
 
-            printf("temp directory: %s\n\n", temp_curr_dir[0].filename);
+            printf("temp directory set to: %s\n\n", temp_curr_dir[0].filename);
             return 0;
         }
 
@@ -134,7 +121,7 @@ int validate_path(char * name) {
             LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
             
 
-            printf("Current directory: %s\n\n", curr_dir[0].filename);
+            printf("temp directory set to: %s\n\n", curr_dir[0].filename);
             return 0;
         }
 
@@ -199,7 +186,7 @@ int parse_pathname(const char * pathname)
     while (name != NULL)
     {
 
-        printf("Pathname: %s : ", name);
+        printf("Pathname: %s -> ", name);
         ret = validate_path(name);
         if (ret == -1) 
         {

@@ -69,11 +69,11 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	
 	//checking if magic number is a match
-	if (VCB->magic_num != 3)
+	if (VCB->magic_num != 4)
 	{
 		flush_blocks(numberOfBlocks, blockSize);
 
-		VCB->magic_num = 3;
+		VCB->magic_num = 4;
 		VCB->total_blocks = numberOfBlocks;
 		VCB->block_size = blockSize;
 		
@@ -84,15 +84,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		create_dir(".", 700);
 
-		//---------- TESTING MAKE DIR -----------//
-
-		// fs_mkdir("/home", 777);
-
-		// simulating a reset to root directory
-		// free(cur_dir);
-		// cur_dir = NULL;
-
-		// fs_mkdir("/home/Documents", 707);
+		// setting current working directory to root
+		curr_dir = malloc(VCB->block_size * 6);
+		LBAread(curr_dir, 6, VCB->root_start);
 	}
 		
 		return 0;
@@ -101,6 +95,12 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 void exitFileSystem ()
 {	
+	if (curr_dir != NULL)
+	{
+		free(curr_dir);
+		curr_dir = NULL;
+	}
+	
 	
 	if (VCB != NULL)
 	{
