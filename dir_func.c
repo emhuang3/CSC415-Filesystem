@@ -22,7 +22,16 @@ void create_dir(char * name, int permissions)
     if (temp_dir == NULL)
     {
         temp_dir = malloc(VCB->block_size*6);
+
+        // checking if malloc was successful
+	    if (temp_dir == NULL)
+	    {
+		    printf("ERROR: failed to malloc.\n");
+		    exit(-1);
+	    }
     }
+
+    
     
     strncpy(temp_dir[0].filename, name, strlen(name));
 
@@ -88,6 +97,13 @@ int validate_path(char * name) {
     {
         temp_curr_dir = malloc(VCB->block_size * 6);
 
+        // checking if malloc was successful
+	    if (temp_curr_dir == NULL)
+	    {
+		    printf("ERROR: failed to malloc.\n");
+		    exit(-1);
+	    }
+
         // starting temp from the current working directory
         LBAread(temp_curr_dir, 6, curr_dir[0].starting_block);
     }
@@ -121,7 +137,7 @@ int validate_path(char * name) {
             LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
             
 
-            printf("temp directory set to: %s\n\n", curr_dir[0].filename);
+            printf("temp directory set to: %s\n\n", temp_curr_dir[0].filename);
             return 0;
         }
 
@@ -159,6 +175,7 @@ int parse_pathname(const char * pathname)
 {
     char * count_slashes = strdup(pathname);
     char * buffer_pathname = strdup(pathname);
+    num_of_paths = 0;
 
     printf("buffer_pathname: %s\n", buffer_pathname);
 
@@ -166,6 +183,7 @@ int parse_pathname(const char * pathname)
     if (count_slashes[0] != '\\')
     {
         printf("ERROR: path must begin with '\\'\n\n");
+        num_of_paths = -1;
         return -1;
     }
     
@@ -175,12 +193,14 @@ int parse_pathname(const char * pathname)
         if (count_slashes[i] == '\\' && i == strlen(count_slashes) - 1)
         {
             printf("ERROR: empty head path after '\\'\n\n");
+            num_of_paths = -1;
             return -1;
         }
 
         else if (count_slashes[i] == '\\' && count_slashes[i + 1] == '\\')
         {
             printf("ERROR: invalid double '\\'\n\n");
+            num_of_paths = -1;
             return -1;
         }
 
@@ -257,16 +277,24 @@ int fs_mkdir(const char * pathname, mode_t mode)
         }
     }
 
-    //reset temp curr working directory
-    free(temp_curr_dir);
-    temp_curr_dir = NULL;
+    /*
+    if temp dir was used, then reset temp curr 
+    working directory for next use.
+    */
+
+    if (temp_curr_dir != NULL)
+    {
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
 
     return ret;
 }
 
 int fs_rmdir(const char *pathname) 
 {
-    int ret = parse_pathname(pathname);
+    // int ret = parse_pathname(pathname);
+    int ret = 0;
 
     //checking that this directory is not root
     if (strcmp(temp_curr_dir[0].filename, ".") == 0)
@@ -289,19 +317,21 @@ int fs_rmdir(const char *pathname)
             }
         }
 
-        /*
-         this function will only clear relevent meta data of 
-         initial block, marking the previously allocated
-         blocks as free to write to.
-        */
-
         if (ret == 0)
         {   
-            // free dir entry from parent
+            // getting the parent dir from child
             temp_dir = malloc(VCB->block_size*6);
+                
+            // checking if malloc was successful
+	        if (temp_dir == NULL)
+	        {
+		        printf("ERROR: failed to malloc.\n");
+		        exit(-1);
+	        }
+
             LBAread(temp_dir, 6, temp_curr_dir[1].starting_block);
 
-            //looking for this directory in parent directory, then erasing it
+            //looking for this directory in parent directory, then erasing it from parent directory
             for (int i = 2; i < 64; i++)
             {
                 if (strcmp(temp_dir[i].filename, temp_curr_dir[0].filename) == 0)
@@ -309,11 +339,11 @@ int fs_rmdir(const char *pathname)
                     printf("found child [%s] in parent [%s] at index %d.\n", 
                     temp_curr_dir[0].filename, temp_dir[i].filename, i);
 
-                    // clear metadata in parent
+                    // clearing filename in parent will mark this entry as free to write to
                     memset(temp_dir[i].filename, 0, sizeof(temp_dir[i].filename));
-                    temp_dir[i].permissions = 0;
-                    temp_dir[i].size = 0;
-                    temp_dir[i].starting_block = 0;
+
+                    // free up space in freespace bitmap
+                    reallocate_space(temp_curr_dir);
 
                     i = 64;
                 }
@@ -324,18 +354,11 @@ int fs_rmdir(const char *pathname)
                     printf("ERROR: cannot find child [%s] in parent [%s].\n", 
                     temp_curr_dir[0].filename, temp_dir[i].filename);
                 }
-                
-            }
-            
-            if (ret == 0)
-            {
-                // free up space in freespace bitmap
-                ret = reallocate_space(temp_curr_dir);
             }
         }
 
         // update parent directory to disk (i.e. temp_dir).
-        if (ret = 0)
+        if (ret == 0)
         {
             LBAwrite(temp_dir, 6, temp_dir[0].starting_block);
             printf("-- updated disk --\n\n");
@@ -354,4 +377,41 @@ int fs_rmdir(const char *pathname)
     temp_curr_dir = NULL;
 
     return ret;
+}
+
+//return 1 if head path is directory is true and 0 if false
+int fs_isDir(char * path){
+    int ret = parse_pathname(path); 
+
+    printf("ret: %d\n", ret);
+    printf("is_file: %d\n", temp_curr_dir[0].is_file);
+
+    if(ret == 0){
+        
+        /*
+         temp_curr_dir is updated to head path 
+         after successful return on parse_path()
+        */
+
+        if (temp_curr_dir[0].is_file == 0){
+            ret = 1;
+        }
+    }
+    
+    return ret;
+}
+
+//return 0 if path is file, -1 otherwise
+int fs_isFile(char * path){
+    //basically the same code as fs_isDir, just change the if ondition to (directory.is_file == 1) instead
+    //the is_file val can be 0(dir), 1(file), -1(invalid)
+    return 0;
+}
+
+int fs_delete(char* filename){
+    char* pathname = strcat("./", filename);
+    // check if file exists with parse_pathname(pathname);
+    // if DNE, return -1 and throw error.
+    // now how do we delete it?
+    return 0;
 }

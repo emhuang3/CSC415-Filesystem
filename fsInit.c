@@ -42,6 +42,13 @@ void flush_blocks(int numOfBlocks, uint64_t blockSize)
 {
 	uint64_t * clean_this_block = malloc(blockSize);
 
+	// checking if malloc was successful
+	if (clean_this_block == NULL)
+	{
+		printf("ERROR: failed to malloc.\n");
+		exit(-1);
+	}
+
 	for (int i = 0; i < numOfBlocks; i++)
 	{
 		LBAread(clean_this_block, 1, i);
@@ -63,6 +70,14 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	/* TODO: Add any code you need to initialize your file system. */
 
 	VCB = malloc(blockSize);
+
+	// checking if malloc was successful
+	if (VCB == NULL)
+	{
+		printf("ERROR: failed to malloc.\n");
+		exit(-1);
+	}
+	
 	
 	//VCB is updated with whatever is at position 0
 	LBAread(VCB, 1, 0);
@@ -86,6 +101,14 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		// setting current working directory to root
 		curr_dir = malloc(VCB->block_size * 6);
+		
+		// checking if malloc was successful
+		if (curr_dir == NULL)
+		{
+			printf("ERROR: failed to malloc.\n");
+			exit(-1);
+		}
+
 		LBAread(curr_dir, 6, VCB->root_start);
 	}
 		

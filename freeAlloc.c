@@ -21,8 +21,19 @@ void update_free_block_start()
 	if (buffer_bitmap == NULL)
 	{
 		buffer_bitmap = malloc(sizeof(buffer_bitmap) * VCB->total_blocks);
+		
+		// checking if malloc was successful
+		if (buffer_bitmap == NULL)
+		{
+			printf("ERROR: failed to malloc.\n");
+			exit(-1);
+		}
+
 		LBAread(buffer_bitmap, 5, 1);
 	}
+
+	
+	
 
 	//finding the first free block in the freespace bitmap
 	for (int i = 0; i < VCB->total_blocks; i++)
@@ -48,8 +59,18 @@ int allocate_space(int amount_to_alloc)
 	if (buffer_bitmap == NULL)
 	{
 		buffer_bitmap = malloc(sizeof(buffer_bitmap) * VCB->total_blocks);
+
+		// checking if malloc was successful
+		if (buffer_bitmap == NULL)
+		{
+			printf("ERROR: failed to malloc.\n");
+			exit(-1);
+		}
+
 		LBAread(buffer_bitmap, 5, 1); // blocks 1 -> 5 represent our freespace bitmap
 	}
+
+	
 
 	/*
 	this iterates through the buffer_bitmap to see if block is free or occupied.
@@ -107,7 +128,16 @@ void init_bitmap()
 	if (buffer_bitmap == NULL)
 	{
 		buffer_bitmap = malloc(sizeof(buffer_bitmap) * VCB->total_blocks);
+
+		// checking if malloc was successful
+		if (buffer_bitmap == NULL)
+		{
+			printf("ERROR: failed to malloc.\n");
+			exit(-1);
+		}
 	}
+
+	
 
 	//initializing dedicated block space for VCB and freespace bitmap
 	for (int i = 0; i < 6; i++)
@@ -120,7 +150,7 @@ void init_bitmap()
 	update_free_block_start();
 }
 
-int reallocate_space(dir_entr * directory)
+void reallocate_space(dir_entr * directory)
 {
 	// get num of blocks this directory occupies
 	int count = ceil(directory[0].size/512);
@@ -129,8 +159,19 @@ int reallocate_space(dir_entr * directory)
 	if (buffer_bitmap == NULL)
 	{
 		buffer_bitmap = malloc(sizeof(buffer_bitmap) * VCB->total_blocks);
+
+		// check if malloc was successful
+		if (buffer_bitmap == NULL)
+		{
+			printf("ERROR: failed to malloc.\n");
+			exit(-1);
+		}
+
 		LBAread(buffer_bitmap, 5, 1);
 	}
+
+	
+	
 
 	printf("Blocks freed: ");
 	for (int i = directory[0].starting_block; i < directory[0].starting_block + count; i++)
@@ -150,6 +191,4 @@ int reallocate_space(dir_entr * directory)
 	 since those will be overwritten anyways as they are
 	 marked free to overwrite by freespace reallocation.
 	*/
-
-	return 0;
 }
