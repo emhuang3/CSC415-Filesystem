@@ -252,14 +252,15 @@ int load_Dir(char * token){
     for(int i = 0; i<64; i++){
         if(strcmp(token, currentDir[i].filename)==0){
             dir_ent_position = i;
-            printf("MATCH token : %s\n", token);
+            //printf("MATCH token : %s\n", token);
             LBAread(currentDir, 6, currentDir[i].starting_block);
             //found so reset i to 0 and set currentDir 
             //printf("%s\n", currentDir->filename);
             break;
         }
         else if(i ==63){
-            printf("This does not exist: %s\n", token);
+            //printf("This does not exist: %s\n", token);
+            return -1;
         }
     }
     return dir_ent_position;
@@ -297,7 +298,8 @@ fdDir * fs_opendir(const char * name){
     each as it is confirmed to be valid*/
     dir_ent_position = parsePath(name);
     if(dir_ent_position == -1){
-        printf("File path does not exist.\n");
+        printf("    File path does not exist.\n");
+        return dirp;
     }
     // printf("Destination: %s\n", currentDir->filename);
     // printf("The starting block of the file: %d\n", currentDir->starting_block);
@@ -339,9 +341,8 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
         dirItem->fileType = FT_REGFILE;
     }
 
-    if(dirp->dirEntryPosition >=64){
+    if(dirp->dirEntryPosition >=63){
         return NULL;
-        //printf("File: %s | Position: %d\n", dirItem->d_name, dirp->dirEntryPosition);
     }
     else if(strcmp(currentDir[dirp->dirEntryPosition].filename, "")!=0){
        strcpy(dirItem->d_name, currentDir[dirp->dirEntryPosition].filename);
@@ -353,7 +354,11 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
             dirp->dirEntryPosition <63){
 
             dirp->dirEntryPosition += 1;
-            strcpy(dirItem->d_name, currentDir[dirp->dirEntryPosition].filename);
+            if(strcmp(currentDir[dirp->dirEntryPosition].filename, "")!=0){
+                strcpy(dirItem->d_name, currentDir[dirp->dirEntryPosition].filename);
+            }else{
+                return NULL;
+            }
             
         }
         //printf("File: %s | Position: %d\n", dirItem->d_name, dirp->dirEntryPosition);
@@ -388,5 +393,14 @@ int fs_isDir(char * path){
 }
 
 int fs_stat(const char *path, struct fs_stat *buf){
-    
+    //parsePath(path);
+    //printf(currentDir->filename);
+    buf->st_size = sizeof(dir_entr);
+    // off_t     st_size;    		/* total size, in bytes */
+	// blksize_t st_blksize; 		/* blocksize for file system I/O */
+	// blkcnt_t  st_blocks;  		/* number of 512B blocks allocated */
+	// time_t    st_accesstime;   	/* time of last access */
+	// time_t    st_modtime;   	/* time of last modification */
+	// time_t    st_createtime;   	/* time of last status change */
+    return 0;
 }

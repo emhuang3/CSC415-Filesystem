@@ -139,9 +139,9 @@ int cmd_ls (int argcnt, char *argvec[])
 		{
 		/* These options set their assigned flags to value and return 0 */
 		/* These options don't set flags and return the value */	 
-		{"long",	no_argument, 0, 'l'},  
-		{"all",		no_argument, 0, 'a'},
-		{"help",	no_argument, 0, 'h'},
+		{"long",	no_argument, (int*)1, 'l'},  
+		{"all",		no_argument, (int*)1, 'a'},
+		{"help",	no_argument, (int*)1, 'h'},
 		{0,			0,       0,  0 }
 		};
 		
@@ -673,9 +673,13 @@ int main (int argc, char * argv[])
 		cmdin = readline("Prompt > ");
 		//*******************************
 		// printf("********************************\n");
-		// char * name = "/./home/student/Documents";
-		// parsePath(name);
+		// char * name = "/./home";
+		// // // parsePath(name);
 		// fdDir * x = fs_opendir(name);
+		// while(x != NULL){
+		// 	x = fs_readdir(x);
+		// }
+		
 		// fs_readdir(x);	//Documents
 		// fs_readdir(x);	//student
 		// fs_readdir(x);	//test
@@ -684,8 +688,10 @@ int main (int argc, char * argv[])
 		// fs_readdir(x);	//NULL
 		// fs_readdir(x);	//NULL
 		// close(x);
+
+		//
 		//printf("********************************\n");
-		//parse_pathname(name);
+		
 		//********************************
 #ifdef COMMAND_DEBUG
 		printf ("%s\n", cmdin);
