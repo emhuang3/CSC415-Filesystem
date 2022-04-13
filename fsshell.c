@@ -46,11 +46,11 @@
 #define CMDCP_ON	0
 #define CMDMV_ON	0
 #define CMDMD_ON	1
-#define CMDRM_ON	0
+#define CMDRM_ON	1
 #define CMDCP2L_ON	0
 #define CMDCP2FS_ON	0
-#define CMDCD_ON	0
-#define CMDPWD_ON	0
+#define CMDCD_ON	1
+#define CMDPWD_ON	1
 
 
 typedef struct dispatch_t

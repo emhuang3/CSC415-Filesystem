@@ -42,6 +42,13 @@ void flush_blocks(int numOfBlocks, uint64_t blockSize)
 {
 	uint64_t * clean_this_block = malloc(blockSize);
 
+	// checking if malloc was successful
+	if (clean_this_block == NULL)
+	{
+		printf("ERROR: failed to malloc.\n");
+		exit(-1);
+	}
+
 	for (int i = 0; i < numOfBlocks; i++)
 	{
 		LBAread(clean_this_block, 1, i);
@@ -63,6 +70,14 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	/* TODO: Add any code you need to initialize your file system. */
 
 	VCB = malloc(blockSize);
+
+	// checking if malloc was successful
+	if (VCB == NULL)
+	{
+		printf("ERROR: failed to malloc.\n");
+		exit(-1);
+	}
+	
 	
 	//VCB is updated with whatever is at position 0
 	LBAread(VCB, 1, 0);
@@ -77,31 +92,37 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		VCB->total_blocks = numberOfBlocks;
 		VCB->block_size = blockSize;
 		
-		init_bitmap(numberOfBlocks, blockSize); 
+		init_bitmap(); 
 		update_free_block_start(blockSize);
 
 		// --------- INIT ROOT DIRECTORY ---------- //
 
 		create_dir(".", 700);
-
-		//---------- TESTING MAKE DIR -----------//
-
-		// fs_mkdir("/home", 777);
-
-		// simulating a reset to root directory
-		// free(cur_dir);
-		// cur_dir = NULL;
-
-		// fs_mkdir("/home/Documents", 707);
-		
 	}
+
+	// setting current working directory to root
+	curr_dir = malloc(VCB->block_size * 6);
 		
-		return 0;
+	// checking if malloc was successful
+	if (curr_dir == NULL)
+	{
+		printf("ERROR: failed to malloc.\n");
+		exit(-1);
+	}
+
+	LBAread(curr_dir, 6, VCB->root_start);
+
+	return 0;
 }
 	
 	
 void exitFileSystem ()
 {	
+	if (curr_dir != NULL)
+	{
+		free(curr_dir);
+		curr_dir = NULL;
+	}
 	
 	if (VCB != NULL)
 	{

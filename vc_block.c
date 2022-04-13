@@ -20,7 +20,8 @@ vcb * VCB;
 
 typedef struct dir_entr
 {
-
+	char filename[20];
+	
 	int starting_block;
 	int size;
 
@@ -31,7 +32,7 @@ typedef struct dir_entr
 	int next; 
 
 	int permissions;
-	char filename[20];
+	
 	uid_t user_ID;
 	gid_t group_ID;
 
