@@ -42,15 +42,15 @@
 #define DIRMAX_LEN		4096
 
 /****   SET THESE TO 1 WHEN READY TO TEST THAT COMMAND ****/
-#define CMDLS_ON	0
+#define CMDLS_ON	1
 #define CMDCP_ON	0
 #define CMDMV_ON	0
 #define CMDMD_ON	1
 #define CMDRM_ON	1
 #define CMDCP2L_ON	0
 #define CMDCP2FS_ON	0
-#define CMDCD_ON	0
-#define CMDPWD_ON	0
+#define CMDCD_ON	1
+#define CMDPWD_ON	1
 
 
 typedef struct dispatch_t
@@ -139,9 +139,9 @@ int cmd_ls (int argcnt, char *argvec[])
 		{
 		/* These options set their assigned flags to value and return 0 */
 		/* These options don't set flags and return the value */	 
-		{"long",	no_argument, 0, 'l'},  
-		{"all",		no_argument, 0, 'a'},
-		{"help",	no_argument, 0, 'h'},
+		{"long",	no_argument, (int*) 1, 'l'},  
+		{"all",		no_argument, (int*) 1, 'a'},
+		{"help",	no_argument, (int*) 1, 'h'},
 		{0,			0,       0,  0 }
 		};
 		

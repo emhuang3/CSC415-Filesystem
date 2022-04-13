@@ -86,7 +86,8 @@ int ret;
 int num_of_paths;
 
 // to be called in parse_path(). This function will update temp current working directory
-int validate_path(char * name) {
+int validate_path(char * name) 
+{
     // return -1 if it exits, and 0 if it does not.
 
     // this represents the paths remaining to be searched
@@ -170,7 +171,6 @@ int validate_path(char * name) {
     }
 }
 
-
 int parse_pathname(const char * pathname)
 {
     char * count_slashes = strdup(pathname);
@@ -178,6 +178,21 @@ int parse_pathname(const char * pathname)
     num_of_paths = 0;
 
     printf("buffer_pathname: %s\n", buffer_pathname);
+
+    //just in case there is a newline character, this will remove \n
+    char * newLine = strchr(buffer_pathname, '\n');
+    if (newLine)
+    {
+        * newLine = '\0';
+    } 
+
+    if (strlen(buffer_pathname) == 0 )
+    {
+        printf("empty path given.\n");
+
+        num_of_paths = -1;
+        return 1; // will return 1 for special cases
+    }
 
     //check that beginning of pathname is '\'
     if (count_slashes[0] != '\\')
@@ -214,12 +229,7 @@ int parse_pathname(const char * pathname)
 
     printf("num of paths: %d\n", num_of_paths);
 
-    //just in case there is a newline character, this will remove \n
-    char * newLine = strchr(buffer_pathname, '\n');
-    if (newLine)
-    {
-        * newLine = ' ';
-    } 
+
 
     // call str_tok to divide pathname into tokens
     char * name = strtok(buffer_pathname, "\\");
@@ -380,7 +390,8 @@ int fs_rmdir(const char *pathname)
 }
 
 //return 1 if head path is directory is true and 0 if false
-int fs_isDir(char * path){
+int fs_isDir(char * path)
+{
     int ret = parse_pathname(path); 
 
     printf("is_file: %d\n", temp_curr_dir[0].is_file);
@@ -400,17 +411,174 @@ int fs_isDir(char * path){
     return ret;
 }
 
-//return 0 if path is file, -1 otherwise
-int fs_isFile(char * path){
+
+//return 1 if path is file, 0 if false
+int fs_isFile(char * path)
+{
     //basically the same code as fs_isDir, just change the if ondition to (directory.is_file == 1) instead
     //the is_file val can be 0(dir), 1(file), -1(invalid)
-    return 0;
+    return 1;
 }
 
-int fs_delete(char* filename){
-    char* pathname = strcat("./", filename);
+int fs_delete(char* filename)
+{
+    char* pathname = strcat(".\\", filename);
     // check if file exists with parse_pathname(pathname);
     // if DNE, return -1 and throw error.
     // now how do we delete it?
+    return 0;
+}
+
+char * fs_getcwd(char * buf, size_t size) {
+
+    // travel backwords from curr_dir and populate an absolute path to display
+    strcpy(buf, curr_dir[0].filename);
+
+    return buf;
+}
+
+
+int fs_setcwd(char * buf) 
+{
+    if (strcmp(buf, "..") == 0)
+    {
+        LBAread(curr_dir, 6, curr_dir[1].starting_block);
+        return 0;
+    }
+    
+    int ret = parse_pathname(buf);
+
+    if (ret == 0) {
+        LBAread(curr_dir, 6, temp_curr_dir[0].starting_block);
+    }
+
+    if (temp_curr_dir != NULL)
+    {
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
+
+    return ret;
+}
+
+
+//used in ls
+fdDir * dirp;
+fdDir * fs_opendir(const char * name){
+    
+    int ret = 0;
+
+    char * name_check = malloc (4096 + 1);
+    if (strcmp(name, fs_getcwd(name_check, 4096 + 1)) != 0)
+    {
+        ret = parse_pathname(name);
+    }
+    
+    if(ret == -1){
+        printf("path does not exist.\n");
+        return dirp;
+    }
+    
+    if (temp_curr_dir == NULL)
+    {
+        temp_curr_dir = malloc(VCB->block_size*6);
+        LBAread(temp_curr_dir, 6, curr_dir[0].starting_block);
+    }
+
+    //make a pointer for the directory steam
+    dirp = malloc(sizeof(fdDir));
+
+    //always begin at file pos 0 in directory stream
+    dirp->dirEntryPosition = 0;
+
+    //Location of the directory in relation to the LBA
+    dirp->directoryStartLocation = temp_curr_dir[0].starting_block;
+
+    return dirp;
+}
+
+//used in displayFiles()
+struct fs_diriteminfo * dirItem;
+struct fs_diriteminfo *fs_readdir(fdDir *dirp){
+
+    dirItem = malloc(sizeof(struct fs_diriteminfo));
+    
+    //printf("**********ReadDir*************\n");
+    //assign filetype
+
+    /*
+     temp_curr_dir will always be updated to head of entire path, 
+     so we can just check inside temp_curr_dir if it is a file or not
+    */
+
+    if (temp_curr_dir[0].is_file == 0){
+        
+        dirItem->fileType = FT_DIRECTORY;
+    }
+
+    if (temp_curr_dir[0].is_file == 1)
+    {
+        dirItem->fileType = FT_REGFILE;
+    }
+
+    if(dirp->dirEntryPosition >=63){
+        return NULL;
+    }
+    else if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")!=0){
+       strcpy(dirItem->d_name, temp_curr_dir[dirp->dirEntryPosition].filename);
+       //printf("File: %s | Position: %d\n", dirItem->d_name, dirp->dirEntryPosition);
+       dirp->dirEntryPosition += 1;
+    }
+    else if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")==0){
+        while(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")==0 && 
+            dirp->dirEntryPosition <63){
+
+            dirp->dirEntryPosition += 1;
+            if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")!=0){
+                strcpy(dirItem->d_name, temp_curr_dir[dirp->dirEntryPosition].filename);
+            }else{
+                return NULL;
+            }
+            
+        }
+        
+        dirp->dirEntryPosition += 1;
+    }
+    
+    return dirItem;
+}
+
+//used in displayFiles()
+int fs_closedir(fdDir *dirp){
+    //frees up the memory you allocated for opendir
+    if (temp_curr_dir != NULL)
+    {
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
+    
+    free(dirp);
+    dirp = NULL;
+
+    free(dirItem);
+    dirItem = NULL;
+    
+    return 0;
+}
+
+//everything except block size seems to be optional
+int fs_stat(const char *path, struct fs_stat *buf){
+    // off_t     st_size;    		/* total size, in bytes */
+    buf->st_size = sizeof(dir_entr) * 64;
+	// blksize_t st_blksize; 		/* blocksize for file system I/O */
+    buf->st_blksize = 512;
+	// blkcnt_t  st_blocks;  		/* number of 512B blocks allocated */
+    buf->st_blocks = 6;
+	// time_t    st_accesstime;   	/* time of last access */
+
+	// time_t    st_modtime;   	/* time of last modification */
+
+	// time_t    st_createtime;   	/* time of last status change */
+
     return 0;
 }
