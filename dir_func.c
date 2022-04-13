@@ -186,14 +186,6 @@ int parse_pathname(const char * pathname)
         * newLine = '\0';
     } 
 
-    if (strlen(buffer_pathname) == 0 )
-    {
-        printf("empty path given.\n");
-
-        num_of_paths = -1;
-        return 1; // will return 1 for special cases
-    }
-
     //check that beginning of pathname is '\'
     if (count_slashes[0] != '\\')
     {
