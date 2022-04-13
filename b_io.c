@@ -32,7 +32,7 @@
 
 typedef struct b_fcb
 	{
-	/** TODO add al the information you need in the file control block **/
+	/** TODO add all the information you need in the file control block **/
 	char * buf;		//holds the open file buffer
 	int index;		//holds the current position in the buffer
 	int buflen;		//holds how many valid bytes are in the buffer

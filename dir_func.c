@@ -8,11 +8,6 @@
 #include <mfs.h>
 #include "freeAlloc.c"
 
-/*
-example of make dir with permissions
-status = mkdir("/home/cnd/mod1", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-*/
-
 dir_entr * temp_dir;      // this is a temp dir for making/removing directories and getting cwd
 dir_entr * temp_curr_dir; // this will represent a temp pointer to current working directory.
 dir_entr * curr_dir;      // this will be kept in memory as a pointer to a current working directory
@@ -86,7 +81,11 @@ char saved_filename[20];
 int ret;
 int num_of_paths;
 
-// to be called in parse_path(). This function will update temp current working directory
+/* 
+to be called in parse_path(). This function will update 
+temp current working directory to check if a valide path was given
+*/
+
 int validate_path(char * name) 
 {
     // return -1 if it exits, and 0 if it does not.
@@ -106,7 +105,7 @@ int validate_path(char * name)
 		    exit(-1);
 	    }
 
-        // starting temp from the current working directory
+        // initializing temp from the current working directory
         LBAread(temp_curr_dir, 6, curr_dir[0].starting_block);
     }
 
@@ -120,26 +119,18 @@ int validate_path(char * name)
         // this path was found while more paths still need to be searched
         if (strcmp(temp_curr_dir[i].filename, name) == 0 && num_of_paths > 0)
         {
-            printf("found path\n");
 
             // updating temp with found path
             LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
-
-            printf("temp directory set to: %s\n\n", temp_curr_dir[0].filename);
             return 0;
         }
 
         // last path was found
         else if (strcmp(temp_curr_dir[i].filename, name) == 0 && num_of_paths == 0)
         {
-            printf("last path already exists\n");
-            printf("NOT able to create this directory\n");
 
-            // updating temp directory with found path
+            // updating temp with found path
             LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
-            
-
-            printf("temp directory set to: %s\n\n", temp_curr_dir[0].filename);
             return 0;
         }
 
@@ -148,25 +139,19 @@ int validate_path(char * name)
          In this case we can break out of the while loop by returning -1
         */
 
+        // this else-if container implies that path was not found while there are still paths left to search
         else if (i == 63 && num_of_paths > 0)
         {
-            // this else-container implies that path was not found while there are still paths left to search
-            printf("path %s does not exist in %s Directory\n", name, temp_curr_dir[0].filename);
-            printf("NOT able to create this directory\n");
-
             return -1;
         }
 
         // last path does not exist. This implies that we can make a new directory
         else if (i == 63 && num_of_paths == 0)
         {
-            printf("last path does not exist\n");
-            printf("able to create this directory\n");
 
             // save name
             memset(saved_filename,0, sizeof(saved_filename));
             strncpy(saved_filename, name, strlen(name));
-            // saved_filename = name;
             return -1;
         }
     }
@@ -177,8 +162,6 @@ int parse_pathname(const char * pathname)
     char * count_slashes = strdup(pathname);
     char * buffer_pathname = strdup(pathname);
     num_of_paths = 0;
-
-    printf("buffer_pathname: %s\n", buffer_pathname);
 
     //just in case there is a newline character, this will remove \n
     char * newLine = strchr(buffer_pathname, '\n');
@@ -218,23 +201,16 @@ int parse_pathname(const char * pathname)
         }
     }
 
-    memset(count_slashes, 0, sizeof(count_slashes));
-
-    printf("num of paths: %d\n", num_of_paths);
-
-
-
-    // call str_tok to divide pathname into tokens
+    // calling str_tok to divide pathname into tokens
     char * name = strtok(buffer_pathname, "\\");
     
     while (name != NULL)
     {
 
-        printf("Pathname: %s -> ", name);
+        // validating that each path is valid
         ret = validate_path(name);
         if (ret == -1) 
         {
-            printf("invalid path\n");
             return ret;
         }
 
@@ -246,8 +222,13 @@ int parse_pathname(const char * pathname)
 
 int fs_mkdir(const char * pathname, mode_t mode) 
 {
-    // will return -1 if path is invalid, and 0 if it is a hit
+    // will return -1 if path is invalid, and 0 if it is valid
     int ret = parse_pathname(pathname);
+
+    /*
+     this if statement implies that the last path does not exist, 
+     which means we can make this directory
+    */
 
     if (ret == -1 && num_of_paths == 0)
     {
@@ -317,7 +298,7 @@ int fs_rmdir(const char *pathname)
         }
     }
 
-    // if directory is empty
+    // if directory is empty and not root
     if (ret == 0)
     {   
         
@@ -338,8 +319,6 @@ int fs_rmdir(const char *pathname)
         {
             if (strcmp(temp_dir[i].filename, temp_curr_dir[0].filename) == 0)
             {
-                printf("found child [%s] in parent [%s] at index %d.\n", 
-                temp_curr_dir[0].filename, temp_dir[0].filename, i);
 
                 // clearing filename in parent will mark this entry as free to write to
                 memset(temp_dir[i].filename, 0, sizeof(temp_dir[i].filename));
@@ -350,11 +329,10 @@ int fs_rmdir(const char *pathname)
                 i = 64;
             }
 
+            // cannot find this entry in parent
             else if (i == 63)
             {
                 ret = -1;
-                printf("ERROR: cannot find child [%s] in parent [%s].\n", 
-                temp_curr_dir[0].filename, temp_dir[0].filename);
             }
         }
     }
@@ -369,7 +347,9 @@ int fs_rmdir(const char *pathname)
         {
             printf("fatal error: -- did not update disk --\n\n");
         }
-
+    
+    // --------------- clean up --------------- //
+    memset(temp_dir, 0, sizeof(temp_dir));
     free(temp_dir);
     temp_dir = NULL;
 
@@ -384,16 +364,10 @@ int fs_isDir(char * path)
 {
     int ret = parse_pathname(path); 
 
-    printf("is_file: %d\n", temp_curr_dir[0].is_file);
-
-    if(ret == 0){
-        
-        /*
-         temp_curr_dir is updated to head path 
-         after successful return on parse_path()
-        */
-
-        if (temp_curr_dir[0].is_file == 0){
+    if(ret == 0)
+    {
+        if (temp_curr_dir[0].is_file == 0)
+        {
             ret = 1;
         }
     }
@@ -404,50 +378,55 @@ int fs_isDir(char * path)
     return ret;
 }
 
-//return 0 if path is file, -1 otherwise
+//return 1 if path is file, 0 otherwise
 int fs_isFile(char * path){
-    //basically the same code as fs_isDir, just change the if ondition to (directory.is_file == 1) instead
-    int ret = parse_pathname(path); // we need to parse the path and return the file start block and length. if the path is invlid retun -1 or "invalid path"
+    
+    int ret = parse_pathname(path);
 
-    if(ret == 0){
-        for (int i = 2; i < 64; i++){
-            //check temp_curr_dir for it's is_file and filename value
-            if(temp_curr_dir[i].filename == saved_filename && temp_curr_dir[i].is_file == 1){
-                //the is_file val can be 0(dir), 1(file), -1(invalid)
-                free(temp_curr_dir);
-                temp_curr_dir = NULL;
-                return 1;
+    if(ret == 0)
+    {
+        for (int i = 2; i < 64; i++)
+        {
+            if(temp_curr_dir[i].filename == saved_filename && temp_curr_dir[i].is_file == 1)
+            {
+                ret = 1;
+                i = 64;
             }
         }
     }
-    //reset current working directory
+    
+
     free(temp_curr_dir);
     temp_curr_dir = NULL;
-    return 0;
+    return ret;
 }
 
-int fs_delete(char* filename){
+int fs_delete(char* filename)
+{
     char * path = strcat("./", filename);
     int ret = parse_pathname(path);
     
-    if (ret == -1 || temp_curr_dir->is_file != 1){
+    if (ret == -1 || temp_curr_dir->is_file != 1)
+    {
         free(temp_curr_dir);
         temp_curr_dir = NULL;
         return ret;
     }
-    else if (temp_curr_dir->is_file != 1){
+    else if (temp_curr_dir->is_file != 1)
+    {
         free(temp_curr_dir);
         temp_curr_dir = NULL;
         printf("%s is not a file", temp_curr_dir->filename);
         return -1;
     }
-    // now how do we delete it?
+    
     free(curr_dir);
     curr_dir = NULL;
     return ret;
 }
 
-char * fs_getcwd(char * buf, size_t size) {
+char * fs_getcwd(char * buf, size_t size) 
+{
 
     // travel backwords from curr_dir and populate an absolute path to display
     temp_dir = malloc(VCB->block_size * 6);
@@ -572,9 +551,6 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
 {
 
     dirItem = malloc(sizeof(struct fs_diriteminfo));
-    
-    //printf("**********ReadDir*************\n");
-    //assign filetype
 
     /*
      temp_curr_dir will always be updated to head of entire path, 
@@ -595,19 +571,20 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
     {
         return NULL;
     }
-    else if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")!=0)
+    else if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "") !=0 )
     {
        strcpy(dirItem->d_name, temp_curr_dir[dirp->dirEntryPosition].filename);
-       //printf("File: %s | Position: %d\n", dirItem->d_name, dirp->dirEntryPosition);
+
        dirp->dirEntryPosition += 1;
     }
-    else if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")==0)
+    else if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "") == 0)
     {
-        while(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")==0 && dirp->dirEntryPosition <63)
+        while(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "") == 0 && dirp->dirEntryPosition < 63)
         {
 
             dirp->dirEntryPosition += 1;
-            if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")!=0)
+
+            if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "") != 0)
             {
                 strcpy(dirItem->d_name, temp_curr_dir[dirp->dirEntryPosition].filename);
             }
@@ -651,10 +628,13 @@ int fs_stat(const char *path, struct fs_stat *buf)
 {
     // off_t     st_size;    		/* total size, in bytes */
     buf->st_size = sizeof(dir_entr) * 64;
+
 	// blksize_t st_blksize; 		/* blocksize for file system I/O */
     buf->st_blksize = 512;
+
 	// blkcnt_t  st_blocks;  		/* number of 512B blocks allocated */
     buf->st_blocks = 6;
+    
 	// time_t    st_accesstime;   	/* time of last access */
 
 	// time_t    st_modtime;   	/* time of last modification */
