@@ -77,6 +77,7 @@ void create_dir(char * name, int permissions)
 
 	LBAwrite(VCB, 1, 0);
 
+    memset(temp_dir, 0, sizeof(temp_dir));
     free(temp_dir);
 	temp_dir = NULL;
 }
@@ -295,8 +296,8 @@ int fs_mkdir(const char * pathname, mode_t mode)
 
 int fs_rmdir(const char *pathname) 
 {
-    // int ret = parse_pathname(pathname);
-    int ret = 0;
+
+    int ret = parse_pathname(pathname);
 
     //checking that this directory is not root
     if (strcmp(temp_curr_dir[0].filename, ".") == 0)
@@ -305,59 +306,58 @@ int fs_rmdir(const char *pathname)
         printf("ERROR: cannot remove root directory.\n");
     }
 
-    //checking if path is valid and if temp curr working dir is directory
-    if (ret == 0)
+    // check that the directory is empty
+    for (int i = 2; i < 64; i++)
     {
-        // check that the directory is empty
+        if (strcmp(temp_curr_dir[i].filename, "") != 0)
+        {
+            ret = -1;
+            printf("ERROR: directory is not empty.\n");
+            i = 64;
+        }
+    }
+
+    // if directory is empty
+    if (ret == 0)
+    {   
+        
+        temp_dir = malloc(VCB->block_size*6);
+                
+        // checking if malloc was successful
+	    if (temp_dir == NULL)
+	    {
+		    printf("ERROR: failed to malloc.\n");
+		    exit(-1);
+	    }
+
+        // getting the parent dir from child
+        LBAread(temp_dir, 6, temp_curr_dir[1].starting_block);
+
+        //looking for this directory in parent directory, then erasing it from parent directory
         for (int i = 2; i < 64; i++)
         {
-            if (strcmp(temp_curr_dir[i].filename, "") != 0)
+            if (strcmp(temp_dir[i].filename, temp_curr_dir[0].filename) == 0)
             {
-                ret = -1;
-                printf("ERROR: directory is not empty.\n");
+                printf("found child [%s] in parent [%s] at index %d.\n", 
+                temp_curr_dir[0].filename, temp_dir[0].filename, i);
+
+                // clearing filename in parent will mark this entry as free to write to
+                memset(temp_dir[i].filename, 0, sizeof(temp_dir[i].filename));
+
+                // free up space in freespace bitmap
+                reallocate_space(temp_curr_dir);
+
                 i = 64;
             }
-        }
 
-        if (ret == 0)
-        {   
-            // getting the parent dir from child
-            temp_dir = malloc(VCB->block_size*6);
-                
-            // checking if malloc was successful
-	        if (temp_dir == NULL)
-	        {
-		        printf("ERROR: failed to malloc.\n");
-		        exit(-1);
-	        }
-
-            LBAread(temp_dir, 6, temp_curr_dir[1].starting_block);
-
-            //looking for this directory in parent directory, then erasing it from parent directory
-            for (int i = 2; i < 64; i++)
+            else if (i == 63)
             {
-                if (strcmp(temp_dir[i].filename, temp_curr_dir[0].filename) == 0)
-                {
-                    printf("found child [%s] in parent [%s] at index %d.\n", 
-                    temp_curr_dir[0].filename, temp_dir[0].filename, i);
-
-                    // clearing filename in parent will mark this entry as free to write to
-                    memset(temp_dir[i].filename, 0, sizeof(temp_dir[i].filename));
-
-                    // free up space in freespace bitmap
-                    reallocate_space(temp_curr_dir);
-
-                    i = 64;
-                }
-
-                else if (i == 63)
-                {
-                    ret = -1;
-                    printf("ERROR: cannot find child [%s] in parent [%s].\n", 
-                    temp_curr_dir[0].filename, temp_dir[0].filename);
-                }
+                ret = -1;
+                printf("ERROR: cannot find child [%s] in parent [%s].\n", 
+                temp_curr_dir[0].filename, temp_dir[0].filename);
             }
         }
+    }
 
         // update parent directory to disk (i.e. temp_dir).
         if (ret == 0)
@@ -369,7 +369,6 @@ int fs_rmdir(const char *pathname)
         {
             printf("fatal error: -- did not update disk --\n\n");
         }
-    }
 
     free(temp_dir);
     temp_dir = NULL;
