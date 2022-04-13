@@ -112,6 +112,24 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	LBAread(curr_dir, 6, VCB->root_start);
 
+	/// --------------- TEST DIRECTORIES --------------- //
+
+	fs_mkdir("\\school", 511);
+	fs_mkdir("\\work", 511);
+	fs_mkdir("\\personal", 511);
+
+	fs_mkdir("\\school\\homework", 511);
+	fs_mkdir("\\work\\docs", 511);
+	fs_mkdir("\\personal\\docs", 511);
+
+	fs_mkdir("\\school\\notes", 511);
+	fs_mkdir("\\work\\contacts", 511);
+	fs_mkdir("\\personal\\games", 511);
+
+	fs_mkdir("\\school\\homework\\CSC415", 511);
+	fs_mkdir("\\work\\misc", 511);
+	fs_mkdir("\\personal\\misc", 511);
+
 	return 0;
 }
 	

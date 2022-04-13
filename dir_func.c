@@ -13,8 +13,8 @@ example of make dir with permissions
 status = mkdir("/home/cnd/mod1", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 */
 
-dir_entr * temp_dir;      // this is a temp dir for making/removing directories
-dir_entr * temp_curr_dir; // this will represent a temp pointer for pathname validation and directory manipulation
+dir_entr * temp_dir;      // this is a temp dir for making/removing directories and getting cwd
+dir_entr * temp_curr_dir; // this will represent a temp pointer to current working directory.
 dir_entr * curr_dir;      // this will be kept in memory as a pointer to a current working directory
 
 void create_dir(char * name, int permissions) 
@@ -375,7 +375,6 @@ int fs_rmdir(const char *pathname)
         }
         else
         {
-
             printf("fatal error: -- did not update disk --\n\n");
         }
     }
@@ -443,7 +442,7 @@ char * fs_getcwd(char * buf, size_t size) {
    
     strcpy(tail_path, temp_dir[0].filename);
 
-    // -------- concatinating paths into one complet pathname ------ //
+    // -------- concatinating paths into one complete pathname ------ //
     while (strcmp(tail_path, ".") != 0)
     {
         strcat(tail_path, head_path);
@@ -458,7 +457,10 @@ char * fs_getcwd(char * buf, size_t size) {
     strcat(tail_path, head_path);
     strcpy(buf, strcat(slash, tail_path));
 
-    // --------- free up temp buffers -------- //
+    // --------- clean and free up temp buffers -------- //
+    memset(tail_path, 0, sizeof(tail_path));
+    memset(head_path, 0, sizeof(head_path));
+    memset(slash, 0, sizeof(slash));
 
     free(temp_dir);
     temp_dir = NULL;
@@ -486,7 +488,8 @@ int fs_setcwd(char * buf)
     
     int ret = parse_pathname(buf);
 
-    if (ret == 0) {
+    if (ret == 0) 
+    {
         LBAread(curr_dir, 6, temp_curr_dir[0].starting_block);
     }
 
@@ -502,18 +505,27 @@ int fs_setcwd(char * buf)
 
 //used in ls
 fdDir * dirp;
-fdDir * fs_opendir(const char * name){
+char * name_check;
+fdDir * fs_opendir(const char * name)
+{
     
     int ret = 0;
 
-    char * name_check = malloc (4096 + 1);
-    if (strcmp(name, fs_getcwd(name_check, 4096 + 1)) != 0)
+    name_check = malloc (4097);
+
+    if (name_check == NULL)
+    {
+        printf("ERROR: malloc failed.\n");
+        exit(-1);
+    }
+    
+    if (strcmp(name, fs_getcwd(name_check, 4097)) != 0)
     {
         ret = parse_pathname(name);
     }
     
-    if(ret == -1){
-        printf("path does not exist.\n");
+    if(ret == -1)
+    {
         return dirp;
     }
     
@@ -537,7 +549,8 @@ fdDir * fs_opendir(const char * name){
 
 //used in displayFiles()
 struct fs_diriteminfo * dirItem;
-struct fs_diriteminfo *fs_readdir(fdDir *dirp){
+struct fs_diriteminfo *fs_readdir(fdDir *dirp)
+{
 
     dirItem = malloc(sizeof(struct fs_diriteminfo));
     
@@ -549,8 +562,8 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
      so we can just check inside temp_curr_dir if it is a file or not
     */
 
-    if (temp_curr_dir[0].is_file == 0){
-        
+    if (temp_curr_dir[0].is_file == 0)
+    {
         dirItem->fileType = FT_DIRECTORY;
     }
 
@@ -559,25 +572,30 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
         dirItem->fileType = FT_REGFILE;
     }
 
-    if(dirp->dirEntryPosition >=63){
+    if (dirp->dirEntryPosition >= 63)
+    {
         return NULL;
     }
-    else if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")!=0){
+    else if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")!=0)
+    {
        strcpy(dirItem->d_name, temp_curr_dir[dirp->dirEntryPosition].filename);
        //printf("File: %s | Position: %d\n", dirItem->d_name, dirp->dirEntryPosition);
        dirp->dirEntryPosition += 1;
     }
-    else if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")==0){
-        while(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")==0 && 
-            dirp->dirEntryPosition <63){
+    else if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")==0)
+    {
+        while(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")==0 && dirp->dirEntryPosition <63)
+        {
 
             dirp->dirEntryPosition += 1;
-            if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")!=0){
+            if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")!=0)
+            {
                 strcpy(dirItem->d_name, temp_curr_dir[dirp->dirEntryPosition].filename);
-            }else{
+            }
+            else
+            {
                 return NULL;
             }
-            
         }
         
         dirp->dirEntryPosition += 1;
@@ -587,13 +605,18 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
 }
 
 //used in displayFiles()
-int fs_closedir(fdDir *dirp){
-    //frees up the memory you allocated for opendir
+int fs_closedir(fdDir *dirp)
+{
+    // clean and free up the memory you allocated for opendir
     if (temp_curr_dir != NULL)
     {
         free(temp_curr_dir);
         temp_curr_dir = NULL;
     }
+        
+    memset(name_check, 0, sizeof(name_check));
+    free(name_check);
+    name_check = NULL;
     
     free(dirp);
     dirp = NULL;
@@ -605,7 +628,8 @@ int fs_closedir(fdDir *dirp){
 }
 
 //everything except block size seems to be optional
-int fs_stat(const char *path, struct fs_stat *buf){
+int fs_stat(const char *path, struct fs_stat *buf)
+{
     // off_t     st_size;    		/* total size, in bytes */
     buf->st_size = sizeof(dir_entr) * 64;
 	// blksize_t st_blksize; 		/* blocksize for file system I/O */
