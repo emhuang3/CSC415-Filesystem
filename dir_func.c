@@ -432,7 +432,45 @@ int fs_delete(char* filename)
 char * fs_getcwd(char * buf, size_t size) {
 
     // travel backwords from curr_dir and populate an absolute path to display
-    strcpy(buf, curr_dir[0].filename);
+    temp_dir = malloc(VCB->block_size * 6);
+    LBAread(temp_dir, 6, curr_dir[0].starting_block);
+
+    char * tail_path = malloc(VCB->block_size * 6);
+    char * head_path = malloc(VCB->block_size * 6);
+    char * slash = malloc(VCB->block_size * 6);
+
+    strcpy(slash, "\\");
+   
+    strcpy(tail_path, temp_dir[0].filename);
+
+    // -------- concatinating paths into one complet pathname ------ //
+    while (strcmp(tail_path, ".") != 0)
+    {
+        strcat(tail_path, head_path);
+        strcpy(head_path, strcat(slash, tail_path));
+        LBAread(temp_dir, 6, temp_dir[1].starting_block);
+
+        strcpy(tail_path, temp_dir[0].filename);
+        memset(slash, 0, sizeof(slash));
+        strcpy(slash, "\\");
+    }
+    
+    strcat(tail_path, head_path);
+    strcpy(buf, strcat(slash, tail_path));
+
+    // --------- free up temp buffers -------- //
+
+    free(temp_dir);
+    temp_dir = NULL;
+
+    free(tail_path);
+    tail_path = NULL;
+
+    free(head_path);
+    head_path = NULL;
+
+    free(slash);
+    slash = NULL;
 
     return buf;
 }
