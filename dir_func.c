@@ -33,7 +33,7 @@ void create_dir(char * name, int permissions)
 
     
     
-    strncpy(temp_dir[0].filename, name, strlen(name));
+    strcpy(temp_dir[0].filename, name);
 
     // these two will lines will always be true so no need to put them in if statments
     temp_dir[0].size = temp_dir[1].size = sizeof(dir_entr) * 64;
@@ -45,7 +45,7 @@ void create_dir(char * name, int permissions)
         VCB->root_start = temp_dir[0].starting_block = 
         temp_dir[1].starting_block = allocate_space(5);
         temp_dir[0].permissions = temp_dir[1].permissions = permissions;
-        strncpy(temp_dir[1].filename, "..", 2);
+        strcpy(temp_dir[1].filename, "..");
         printf("------------CREATED ROOT DIRECTORY------------\n");
     }
     else // if not root
@@ -54,7 +54,7 @@ void create_dir(char * name, int permissions)
         temp_dir[1].starting_block = temp_curr_dir->starting_block;
         temp_dir[0].permissions = permissions;
         temp_dir[1].permissions = temp_curr_dir->permissions;
-        strncpy(temp_dir[1].filename, temp_curr_dir->filename, strlen(temp_curr_dir->filename));
+        strcpy(temp_dir[1].filename, temp_curr_dir->filename);
         printf("------------CREATED NEW DIRECTORY------------\n");
     }
 
@@ -398,26 +398,54 @@ int fs_isDir(char * path)
             ret = 1;
         }
     }
+
+    free(temp_curr_dir);
+    temp_curr_dir = NULL;
     
     return ret;
 }
 
-
-//return 1 if path is file, 0 if false
-int fs_isFile(char * path)
-{
+//return 0 if path is file, -1 otherwise
+int fs_isFile(char * path){
     //basically the same code as fs_isDir, just change the if ondition to (directory.is_file == 1) instead
-    //the is_file val can be 0(dir), 1(file), -1(invalid)
-    return 1;
+    int ret = parse_pathname(path); // we need to parse the path and return the file start block and length. if the path is invlid retun -1 or "invalid path"
+
+    if(ret == 0){
+        for (int i = 2; i < 64; i++){
+            //check temp_curr_dir for it's is_file and filename value
+            if(temp_curr_dir[i].filename == saved_filename && temp_curr_dir[i].is_file == 1){
+                //the is_file val can be 0(dir), 1(file), -1(invalid)
+                free(temp_curr_dir);
+                temp_curr_dir = NULL;
+                return 1;
+            }
+        }
+    }
+    //reset current working directory
+    free(temp_curr_dir);
+    temp_curr_dir = NULL;
+    return 0;
 }
 
-int fs_delete(char* filename)
-{
-    char* pathname = strcat(".\\", filename);
-    // check if file exists with parse_pathname(pathname);
-    // if DNE, return -1 and throw error.
+int fs_delete(char* filename){
+    char * path = strcat("./", filename);
+    int ret = parse_pathname(path);
+    
+    if (ret == -1 || temp_curr_dir->is_file != 1){
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+        return ret;
+    }
+    else if (temp_curr_dir->is_file != 1){
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+        printf("%s is not a file", temp_curr_dir->filename);
+        return -1;
+    }
     // now how do we delete it?
-    return 0;
+    free(curr_dir);
+    curr_dir = NULL;
+    return ret;
 }
 
 char * fs_getcwd(char * buf, size_t size) {
@@ -453,6 +481,7 @@ char * fs_getcwd(char * buf, size_t size) {
     memset(tail_path, 0, sizeof(tail_path));
     memset(head_path, 0, sizeof(head_path));
     memset(slash, 0, sizeof(slash));
+    memset(temp_dir, 0, sizeof(temp_dir));
 
     free(temp_dir);
     temp_dir = NULL;
@@ -493,7 +522,6 @@ int fs_setcwd(char * buf)
 
     return ret;
 }
-
 
 //used in ls
 fdDir * dirp;
