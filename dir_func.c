@@ -337,7 +337,7 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
     if(fs_isDir(dirp->filepath)){
         dirItem->fileType = FT_DIRECTORY;
     }
-    if(fs_isFile(dirp->filepath)){
+    else{
         dirItem->fileType = FT_REGFILE;
     }
 
@@ -370,7 +370,7 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
 
 //used in displayFiles()
 int fs_closedir(fdDir *dirp){
-    //frees up the memory you allocated for opendir
+    //frees up the memory you allocated for opendir and readdir
     free(currentDir);
     currentDir = NULL;
     free(dirp);
