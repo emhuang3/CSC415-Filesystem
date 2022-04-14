@@ -32,9 +32,6 @@ void update_free_block_start()
 		LBAread(buffer_bitmap, 5, 1);
 	}
 
-	
-	
-
 	//finding the first free block in the freespace bitmap
 	for (int i = 0; i < VCB->total_blocks; i++)
 	{
@@ -67,10 +64,9 @@ int allocate_space(int amount_to_alloc)
 			exit(-1);
 		}
 
-		LBAread(buffer_bitmap, 5, 1); // blocks 1 -> 5 represent our freespace bitmap
+		// blocks 1 -> 5 represent our freespace bitmap
+		LBAread(buffer_bitmap, 5, 1); 
 	}
-
-	
 
 	/*
 	this iterates through the buffer_bitmap to see if block is free or occupied.
@@ -94,18 +90,29 @@ int allocate_space(int amount_to_alloc)
 			else
 			{
 				printf("block %d was moved then written to \n", i);
+
 				//run a move() function to move stuff in block somewhere else.
 				buffer_bitmap[i] = 1;
 				j++;
 			}
 		}
-		else if (j == amount_to_alloc + 1) // exits if no more blocks need to be allocated.
+
+		// exits if no more blocks need to be allocated.
+		else if (j == amount_to_alloc + 1) 
 		{
 			i = VCB->total_blocks;
 		}
-		else if (i == VCB->total_blocks - 1) // implies their is no free space left.
+
+		// implies their is no free space left.
+		else if (i == VCB->total_blocks - 1) 
 		{
-			printf("ERROR: no more space available on disk\n");
+			printf("ERROR: no more space available on disk\n\n");
+
+			//reset buffer_bitmap
+			free(buffer_bitmap);
+			buffer_bitmap = NULL;
+
+			return VCB->free_block_start;
 		}
 	}
 	printf("\n");

@@ -33,6 +33,7 @@
 
 #include "fsLow.h"
 #include "mfs.h"
+#include "b_io.c"
 
 #define PERMISSIONS (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
 
@@ -672,27 +673,11 @@ int main (int argc, char * argv[])
 		{
 		cmdin = readline("Prompt > ");
 		//*******************************
-		// printf("********************************\n");
-
-		// char * name = "/./home";
-		// // // parsePath(name);
-		// fdDir * x = fs_opendir(name);
-		// while(x != NULL){
-		// 	x = fs_readdir(x);
-		// }
+		printf("********************************\n");
+		char * name = "test.txt";
+		b_open(name, O_RDONLY);
 		
-		// fs_readdir(x);	//Documents
-		// fs_readdir(x);	//student
-		// fs_readdir(x);	//test
-		// fs_readdir(x);	//wulu
-		// fs_readdir(x);	//final
-		// fs_readdir(x);	//NULL
-		// fs_readdir(x);	//NULL
-		// close(x);
-
-		//
-		//printf("********************************\n");
-		
+		printf("********************************\n");
 		//********************************
 #ifdef COMMAND_DEBUG
 		printf ("%s\n", cmdin);
