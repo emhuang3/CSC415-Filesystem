@@ -26,9 +26,56 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "b_io.h"
+#include "dir_func.c"
+//#include "vc_block.c"
 
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
+
+// dir_entr * currentDir;
+// int dir_ent_position;
+// int load_Dir(char * token){
+//     dir_ent_position = -1;
+//     for(int i = 0; i<64; i++){
+//         if(strcmp(token, currentDir[i].filename)==0){
+//             dir_ent_position = i;
+//             //printf("MATCH token : %s\n", token);
+//             LBAread(currentDir, 6, currentDir[i].starting_block);
+//             //found so reset i to 0 and set currentDir 
+//             //printf("%s\n", currentDir->filename);
+//             break;
+//         }
+//         else if(i ==63){
+//             //printf("This does not exist: %s\n", token);
+//             return -1;
+//         }
+		
+//     }
+//     return dir_ent_position;
+    
+// }
+
+// char * filetoken;
+// //parsePath for opendir ret
+// int parsePath(const char * pathname){
+//     //first load the entire root directory
+//     currentDir = malloc(512*6);
+//     LBAread(currentDir, 6, 6);
+
+//     //store path name into char copy to use in strtok
+//     char * copy = strdup(pathname);
+    
+//     char * token = strtok(copy, "\\");
+    
+//     while(token != NULL){
+//         filetoken = token;
+// 		//printf("%s\n", filename);
+//         dir_ent_position = load_Dir(token);
+//         token = strtok(NULL, "\\");
+//     }
+//     //printf("%d", dir_ent_position);
+//     return dir_ent_position;
+// }
 
 typedef struct b_fcb
 	{
@@ -70,13 +117,20 @@ b_io_fd b_getFCB ()
 // Interface to open a buffered file
 // Modification of interface for this assignment, flags match the Linux flags for open
 // O_RDONLY, O_WRONLY, or O_RDWR
+b_fcb * fcb;
 b_io_fd b_open (char * filename, int flags)
 	{
 	b_io_fd returnFd;
 
 	//*** TODO ***:  Modify to save or set any information needed
-	//
-	//
+	//if(parsePath(filename) < 0 && flags == O_CREAT){
+		//create file
+	//}
+	fcb = malloc(sizeof(b_fcb));
+	//printf("%s\n", filetoken);
+	fcb->buflen = 0;
+	fcb->index = 0;
+	printf("%d\n", sizeof(b_fcb));
 		
 	if (startup == 0) b_init();  //Initialize our system
 	
@@ -157,5 +211,6 @@ int b_read (b_io_fd fd, char * buffer, int count)
 // Interface to Close the file	
 void b_close (b_io_fd fd)
 	{
-
+		free(fcb);
+		fcb = NULL;
 	}

@@ -31,7 +31,7 @@
 
 #include "fsLow.h"
 #include "mfs.h"
-#include "dir_func.c"
+#include "b_io.c"
 
 /*
 This function is used for cleaning the blocks.
@@ -114,21 +114,21 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	/// --------------- TEST DIRECTORIES --------------- //
 
-	fs_mkdir("\\school", 511);
-	fs_mkdir("\\work", 511);
-	fs_mkdir("\\personal", 511);
+	// fs_mkdir("\\school", 511);
+	// fs_mkdir("\\work", 511);
+	// fs_mkdir("\\personal", 511);
 
-	fs_mkdir("\\school\\homework", 511);
-	fs_mkdir("\\work\\docs", 511);
-	fs_mkdir("\\personal\\docs", 511);
+	// fs_mkdir("\\school\\homework", 511);
+	// fs_mkdir("\\work\\docs", 511);
+	// fs_mkdir("\\personal\\docs", 511);
 
-	fs_mkdir("\\school\\notes", 511);
-	fs_mkdir("\\work\\contacts", 511);
-	fs_mkdir("\\personal\\games", 511);
+	// fs_mkdir("\\school\\notes", 511);
+	// fs_mkdir("\\work\\contacts", 511);
+	// fs_mkdir("\\personal\\games", 511);
 
-	fs_mkdir("\\school\\homework\\CSC415", 511);
-	fs_mkdir("\\work\\misc", 511);
-	fs_mkdir("\\personal\\misc", 511);
+	// fs_mkdir("\\school\\homework\\CSC415", 511);
+	// fs_mkdir("\\work\\misc", 511);
+	// fs_mkdir("\\personal\\misc", 511);
 
 	return 0;
 }

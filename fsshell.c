@@ -49,7 +49,7 @@
 #define CMDMD_ON	1
 #define CMDRM_ON	1
 #define CMDCP2L_ON	0
-#define CMDCP2FS_ON	0
+#define CMDCP2FS_ON	1
 #define CMDCD_ON	1
 #define CMDPWD_ON	1
 
@@ -674,8 +674,13 @@ int main (int argc, char * argv[])
 		cmdin = readline("Prompt > ");
 		//*******************************
 		printf("********************************\n");
-		char * name = "test.txt";
-		b_open(name, O_RDONLY);
+		char * name = "\\home\\student\\test.txt";
+		// int x = b_open(name, O_RDONLY);
+		// printf("Open fd: %d\n", x);
+		// char * name2 = "\\home";
+		// int x2 = b_open(name2, O_RDONLY);
+		// printf("Open fd: %d\n", x2);
+		b_open(name, 0);
 		
 		printf("********************************\n");
 		//********************************
