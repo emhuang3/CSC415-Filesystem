@@ -132,9 +132,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		fs_mkdir("/work/misc", 511);
 		fs_mkdir("/personal/misc", 511);
 
-		int fd = b_open("/personal/misc/newFile.txt", O_CREAT);
+		// int fd = b_open("/personal/misc/newFile.txt", O_CREAT);
 
-		printf("fd: %d\n", fd);
+		// printf("fd: %d\n", fd);
 	}
 
 	if (curr_dir == NULL)

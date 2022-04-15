@@ -44,7 +44,7 @@ typedef struct b_fcb
 
 	int mode; // 1 is write and 0 is no write.
 
-	dir_entr * parent_dir;
+	int pos_in_parent;
 	
 } b_fcb;
 
@@ -122,7 +122,7 @@ b_io_fd b_open (char * pathname, int flags)
 		// implies that file does not exist
 		if (ret == -1) 
 		{
-			if (flags == O_CREAT)
+			if (1)
 			{
 				// create this file in parent
 
@@ -134,7 +134,8 @@ b_io_fd b_open (char * pathname, int flags)
 
 						// marks this position in the parent as occupied
 						strcpy(temp_curr_dir[i].filename, saved_filename);
-						temp_curr_dir[i].starting_block = VCB->free_block_start;
+						temp_curr_dir[i].is_file = 1;
+						fcbArray[returnFd].pos_in_parent = i;
 						i = 64;
 					}
 					else if (i == 63)
@@ -158,7 +159,6 @@ b_io_fd b_open (char * pathname, int flags)
 		printf("invalid path.\n");
 	}
 
-	fcbArray[returnFd].parent_dir = temp_curr_dir;
 	fcbArray[returnFd].buf = malloc(buffer_size + 1);
 	
 	if (fcbArray[returnFd].buf == NULL)
@@ -209,12 +209,60 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	// check that fd is between 0 and (MAXFCBS-1)
 	if ((fd < 0) || (fd >= MAXFCBS))
 	{
-		return (-1); 
+		return (-1);
 	}
 
 		//-------------------------- write to disk ----------------------//
 		int free_space = buffer_size - fcbArray[fd].pos;
+		printf("free_space: %d\n", free_space);
 
+		/*
+		len will grow as buffer grows. must update in parent directory, 
+		and will be used to calculate blocks to allocate for writing to disk
+		*/
+
+		fcbArray[fd].len = buffer_size; 
+		
+		// count is capped at 200 until there is a some left over at the very end.
+
+		if (fcbArray[fd].pos > free_space)
+		{
+			// call realloc to grow buffer
+			buffer_size += 512;
+			char * resized = realloc(fcbArray[fd].buf, buffer_size);
+			printf("buffer_size: %d\n", buffer_size);
+
+			if (resized == NULL)
+			{
+				printf("ERROR: failed to reallocate.\n");
+				return -1;
+			}
+			
+			fcbArray[fd].buf = resized;
+		}
+		
+		memcpy(fcbArray[fd].buf, buffer, count);
+
+		// move position up to track how much freespace we have in buf
+		fcbArray[fd].pos += count;
+		fcbArray[fd].len = fcbArray[fd].pos;
+		
+		// temp for now. 200 = BUFFLEN, implies that less then 200 is probably eof indicator
+		if (count < 200)
+		{
+			// update temp_curr_directory with child's filesize
+			int i = fcbArray[fd].pos_in_parent;
+			temp_curr_dir[i].size = fcbArray[fd].len;
+
+			// write entire file to disk
+			int blocks_to_allocate = ceil(fcbArray[fd].len/512);
+			temp_curr_dir[i].starting_block = allocate_space(blocks_to_allocate);
+			LBAwrite(fcbArray[fd].buf, blocks_to_allocate,temp_curr_dir[i].starting_block);
+
+			// update parent directory
+			LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
+		}
+		
 		return ret;
 }
 
