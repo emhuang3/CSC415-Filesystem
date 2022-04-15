@@ -27,7 +27,6 @@
 #include <fcntl.h>
 #include "b_io.h"
 #include "dir_func.c"
-//#include "vc_block.c"
 
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
@@ -126,6 +125,7 @@ b_io_fd b_open (char * filename, int flags)
 	//if(parsePath(filename) < 0 && flags == O_CREAT){
 		//create file
 	//}
+	parse_pathname(filname);
 	fcb = malloc(sizeof(b_fcb));
 	//printf("%s\n", filetoken);
 	fcb->buflen = 0;
