@@ -77,101 +77,191 @@
 // }
 
 typedef struct b_fcb
-	{
-	/** TODO add all the information you need in the file control block **/
-	char * buf;		//holds the open file buffer
-	int index;		//holds the current position in the buffer
-	int buflen;		//holds how many valid bytes are in the buffer
-	} b_fcb;
+{
+	//holds the open file buffer
+	char * buf;		
+
+	// holds position in fcbArray	
+	int file_descriptor; 		
 	
+	int len;
+	int pos;
+
+	int mode; // 1 is write and 0 is no write.
+
+	dir_entr * parent_dir;
+	
+} b_fcb;
+
+// this is probably used to make the proccess quicker for openning a buffer
 b_fcb fcbArray[MAXFCBS];
 
-int startup = 0;	//Indicates that this has not been initialized
+//Indicates that this has not been initialized
+int startup = 0;	
 
 //Method to initialize our file system
+int buffer_size;
 void b_init ()
-	{
+{
+	buffer_size = VCB->block_size;
+
 	//init fcbArray to all free
 	for (int i = 0; i < MAXFCBS; i++)
 		{
-		fcbArray[i].buf = NULL; //indicates a free fcbArray
+			// indicates a free fcbArray
+			fcbArray[i].buf = NULL;
+			fcbArray[i].mode = 0;
 		}
-		
+
 	startup = 1;
-	}
+}
 
 //Method to get a free FCB element
 b_io_fd b_getFCB ()
-	{
+{
 	for (int i = 0; i < MAXFCBS; i++)
-		{
+	{
 		if (fcbArray[i].buf == NULL)
-			{
+		{
 			return i;		//Not thread safe (But do not worry about it for this assignment)
-			}
 		}
-	return (-1);  //all in use
 	}
+	return (-1);  //all in use
+}
 	
 // Interface to open a buffered file
 // Modification of interface for this assignment, flags match the Linux flags for open
 // O_RDONLY, O_WRONLY, or O_RDWR
-b_fcb * fcb;
-b_io_fd b_open (char * filename, int flags)
-	{
-	b_io_fd returnFd;
 
-	//*** TODO ***:  Modify to save or set any information needed
-	//if(parsePath(filename) < 0 && flags == O_CREAT){
-		//create file
-	//}
-	parse_pathname(filname);
-	fcb = malloc(sizeof(b_fcb));
-	//printf("%s\n", filetoken);
-	fcb->buflen = 0;
-	fcb->index = 0;
-	printf("%d\n", sizeof(b_fcb));
+b_io_fd b_open (char * pathname, int flags)
+{
+	b_io_fd returnFd;
 		
-	if (startup == 0) b_init();  //Initialize our system
+	// initilizes our file interface
+	if (startup == 0) b_init();
 	
-	returnFd = b_getFCB();				// get our own file descriptor
-										// check for error - all used FCB's
-	
-	return (returnFd);						// all set
+	// this will get a free space in the fcb array
+	returnFd = b_getFCB();
+
+	if (returnFd < 0)
+	{
+		return -1;
 	}
+
+	int ret = parse_pathname(pathname);
+
+	// implies that we may have a working file
+	if (ret == -1 && num_of_paths == 0) 
+	{
+
+		//check if the file already exists
+		for (int i = 0; i < 63; i++)
+		{
+			if (strcmp(temp_curr_dir[i].filename, saved_filename) == 0)
+			{
+				printf("File already exists.\n");
+				ret = 0;
+			}
+		}
+
+		// implies that file does not exist
+		if (ret == -1) 
+		{
+			if (flags == O_CREAT)
+			{
+				// create this file in parent
+
+				//find a free space to put file in parent directory
+				for (int i = 0; i < 64; i++)
+				{
+					if (strcmp(temp_curr_dir[i].filename, "") == 0)
+					{
+
+						// marks this position in the parent as occupied
+						strcpy(temp_curr_dir[i].filename, saved_filename);
+						temp_curr_dir[i].starting_block = VCB->free_block_start;
+						i = 64;
+					}
+					else if (i == 63)
+					{
+						printf("ERROR: unable to find free space in the parent directory.\n");
+						return -1;
+					}
+				}
+			}
+			else
+			{
+				// file doesn't exist. Cannot make this file
+
+				return -1;
+			}
+		}
+	}
+
+	else
+	{
+		printf("invalid path.\n");
+	}
+
+	fcbArray[returnFd].parent_dir = temp_curr_dir;
+	fcbArray[returnFd].buf = malloc(buffer_size + 1);
+	
+	if (fcbArray[returnFd].buf == NULL)
+	{
+		printf("failed to malloc");
+		close (returnFd);	
+		return -1;
+	}
+
+	// init to zero. will increment as we read the file
+	fcbArray[returnFd].len = 0;
+	fcbArray[returnFd].pos = 0;
+	
+	printf("opened %s in parent directory: %s, with fd %d.\n", saved_filename, temp_curr_dir[0].filename, returnFd);
+
+	return (returnFd);
+}
 
 
 // Interface to seek function	
 int b_seek (b_io_fd fd, off_t offset, int whence)
-	{
+{
 	if (startup == 0) b_init();  //Initialize our system
 
 	// check that fd is between 0 and (MAXFCBS-1)
 	if ((fd < 0) || (fd >= MAXFCBS))
-		{
-		return (-1); 					//invalid file descriptor
-		}
-		
-		
-	return (0); //Change this
+	{
+		return (-1);
 	}
+
+	if (fcbArray[fd].file_descriptor == -1)
+	{
+		return -1;
+	}
+	
+	return (0);
+}
 
 
 
 // Interface to write function	
 int b_write (b_io_fd fd, char * buffer, int count)
-	{
+{
+	int ret = 0;
+
 	if (startup == 0) b_init();  //Initialize our system
 
 	// check that fd is between 0 and (MAXFCBS-1)
 	if ((fd < 0) || (fd >= MAXFCBS))
-		{
-		return (-1); 					//invalid file descriptor
-		}
-		
-		
-	return (0); //Change this
+	{
+		return (-1); 
 	}
+
+		//-------------------------- write to disk ----------------------//
+		int free_space = buffer_size - fcbArray[fd].pos;
+
+		return ret;
+}
 
 
 
@@ -195,22 +285,44 @@ int b_write (b_io_fd fd, char * buffer, int count)
 //  | Part1       |  Part 2                                        | Part3  |
 //  +-------------+------------------------------------------------+--------+
 int b_read (b_io_fd fd, char * buffer, int count)
-	{
+{
 
 	if (startup == 0) b_init();  //Initialize our system
 
 	// check that fd is between 0 and (MAXFCBS-1)
 	if ((fd < 0) || (fd >= MAXFCBS))
-		{
-		return (-1); 					//invalid file descriptor
-		}
-		
-	return (0);	//Change this
+	{
+		return (-1); 		
 	}
+
+	int num_of_bytes = fcbArray[fd].len - fcbArray[fd].pos;
+
+	if (num_of_bytes == 0)
+	{
+		/* code */
+	}
+	
+		
+	return (0);
+}
 	
 // Interface to Close the file	
 void b_close (b_io_fd fd)
+{
+	//--------------------------- clean up ------------------------//
+
+	for (int i = 0; i < MAXFCBS; i++)
 	{
-		free(fcb);
-		fcb = NULL;
+		if (fcbArray[i].buf != NULL)
+		{
+			free(fcbArray[i].buf);
+			fcbArray[i].buf = NULL;
+		}
 	}
+
+	if (temp_curr_dir != NULL)
+	{
+		free(temp_curr_dir);
+		temp_curr_dir = NULL;
+	}
+}

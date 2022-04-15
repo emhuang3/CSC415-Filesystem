@@ -84,11 +84,11 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	
 	//checking if magic number is a match
-	if (VCB->magic_num != 4)
+	if (VCB->magic_num != 3)
 	{
 		flush_blocks(numberOfBlocks, blockSize);
 
-		VCB->magic_num = 4;
+		VCB->magic_num = 3;
 		VCB->total_blocks = numberOfBlocks;
 		VCB->block_size = blockSize;
 		
@@ -98,22 +98,25 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		// --------- INIT ROOT DIRECTORY ---------- //
 
 		create_dir(".", 700);
-	}
 
-	// setting current working directory to root
-	curr_dir = malloc(VCB->block_size * 6);
+		// temp placement
+
+		// setting current working directory to root
+		curr_dir = malloc(VCB->block_size * 6);
 		
-	// checking if malloc was successful
-	if (curr_dir == NULL)
-	{
-		printf("ERROR: failed to malloc.\n");
-		exit(-1);
-	}
+		// checking if malloc was successful
+		if (curr_dir == NULL)
+		{
+			printf("ERROR: failed to malloc.\n");
+			exit(-1);
+		}
 
-	LBAread(curr_dir, 6, VCB->root_start);
+		LBAread(curr_dir, 6, VCB->root_start);
 
-	/// --------------- TEST DIRECTORIES --------------- //
+		/// --------------- TEST DIRECTORIES --------------- //
 
+
+<<<<<<< HEAD
 	// fs_mkdir("\\school", 511);
 	// fs_mkdir("\\work", 511);
 	// fs_mkdir("\\personal", 511);
@@ -129,6 +132,43 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	// fs_mkdir("\\school\\homework\\CSC415", 511);
 	// fs_mkdir("\\work\\misc", 511);
 	// fs_mkdir("\\personal\\misc", 511);
+=======
+		fs_mkdir("/school", 511);
+		fs_mkdir("/work", 511);
+		fs_mkdir("/personal", 511);
+
+		fs_mkdir("/school/homework", 511);
+		fs_mkdir("/work/docs", 511);
+		fs_mkdir("/personal/docs", 511);
+
+		fs_mkdir("/school/notes", 511);
+		fs_mkdir("/work/contacts", 511);
+		fs_mkdir("/personal/games", 511);
+
+		fs_mkdir("/school/homework/CSC415", 511);
+		fs_mkdir("/work/misc", 511);
+		fs_mkdir("/personal/misc", 511);
+
+		int fd = b_open("/personal/misc/newFile.txt", O_CREAT);
+
+		printf("fd: %d\n", fd);
+	}
+
+	if (curr_dir == NULL)
+	{
+		// setting current working directory to root
+		curr_dir = malloc(VCB->block_size * 6);
+		
+		// checking if malloc was successful
+		if (curr_dir == NULL)
+		{
+			printf("ERROR: failed to malloc.\n");
+			exit(-1);
+		}
+
+		LBAread(curr_dir, 6, VCB->root_start);
+	}
+>>>>>>> a79690410d0f4f2ca0777cf3847ea3902237e6fb
 
 	return 0;
 }

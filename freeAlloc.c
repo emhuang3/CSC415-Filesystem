@@ -77,7 +77,7 @@ int allocate_space(int amount_to_alloc)
 	for (int i = VCB->free_block_start ; i < VCB->total_blocks; i++)
 	{
 		
-		if (j <= amount_to_alloc)
+		if (j < amount_to_alloc)
 		{
 			
 			// block is free. Nothing to move
@@ -97,12 +97,6 @@ int allocate_space(int amount_to_alloc)
 			}
 		}
 
-		// exits if no more blocks need to be allocated.
-		else if (j == amount_to_alloc + 1) 
-		{
-			i = VCB->total_blocks;
-		}
-
 		// implies their is no free space left.
 		else if (i == VCB->total_blocks - 1) 
 		{
@@ -114,6 +108,13 @@ int allocate_space(int amount_to_alloc)
 
 			return VCB->free_block_start;
 		}
+
+		// exits if no more blocks need to be allocated.
+		else
+		{
+			i = VCB->total_blocks;
+		}
+
 	}
 	printf("\n");
 

@@ -39,14 +39,14 @@ void create_dir(char * name, int permissions)
     if (strcmp(temp_dir[0].filename, ".") == 0)
     {
         VCB->root_start = temp_dir[0].starting_block = 
-        temp_dir[1].starting_block = allocate_space(5);
+        temp_dir[1].starting_block = allocate_space(6);
         temp_dir[0].permissions = temp_dir[1].permissions = permissions;
         strcpy(temp_dir[1].filename, "..");
         printf("------------CREATED ROOT DIRECTORY------------\n");
     }
     else // if not root
     {
-        temp_dir[0].starting_block = allocate_space(5);
+        temp_dir[0].starting_block = allocate_space(6);
         temp_dir[1].starting_block = temp_curr_dir->starting_block;
         temp_dir[0].permissions = permissions;
         temp_dir[1].permissions = temp_curr_dir->permissions;
@@ -117,10 +117,24 @@ int validate_path(char * name)
 
     for (int i = 2; i < 64; i++)
     {
-        // this path was found while more paths still need to be searched
-        if (strcmp(temp_curr_dir[i].filename, name) == 0 && num_of_paths > 0)
+        //checking if this is a file
+        if (temp_curr_dir[i].is_file)
         {
+            if (num_of_paths == 0)
+            {
+                // save name for file creation
+                memset(saved_filename,0, sizeof(saved_filename));
+                strncpy(saved_filename, name, strlen(name));
+            }
+            
+            printf("cannot set file as current directory.\n");
+            return -1;
+        }
 
+        // this path was found while more paths still need to be searched
+        else if (strcmp(temp_curr_dir[i].filename, name) == 0 && num_of_paths > 0)
+        {
+            
             // updating temp with found path
             LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
             return 0;
@@ -172,9 +186,9 @@ int parse_pathname(const char * pathname)
     } 
 
     //check that beginning of pathname is '\'
-    if (count_slashes[0] != '\\')
+    if (count_slashes[0] != '/')
     {
-        printf("ERROR: path must begin with '\\'\n\n");
+        printf("ERROR: path must begin with '/'\n\n");
         num_of_paths = -1;
         return -1;
     }
@@ -182,28 +196,28 @@ int parse_pathname(const char * pathname)
     // counting forward slashes to determine num of input
     for (int i = 0; i < strlen(count_slashes); i++)
     {
-        if (count_slashes[i] == '\\' && i == strlen(count_slashes) - 1)
+        if (count_slashes[i] == '/' && i == strlen(count_slashes) - 1)
         {
-            printf("ERROR: empty head path after '\\'\n\n");
+            printf("ERROR: empty head path after '/'\n\n");
             num_of_paths = -1;
             return -1;
         }
 
-        else if (count_slashes[i] == '\\' && count_slashes[i + 1] == '\\')
+        else if (count_slashes[i] == '/' && count_slashes[i + 1] == '/')
         {
-            printf("ERROR: invalid double '\\'\n\n");
+            printf("ERROR: invalid double '/'\n\n");
             num_of_paths = -1;
             return -1;
         }
 
-        else if (count_slashes[i] == '\\')
+        else if (count_slashes[i] == '/')
         {
             num_of_paths++;
         }
     }
 
     // calling str_tok to divide pathname into tokens
-    char * name = strtok(buffer_pathname, "\\");
+    char * name = strtok(buffer_pathname, "/");
     
     while (name != NULL)
     {
@@ -215,7 +229,7 @@ int parse_pathname(const char * pathname)
             return ret;
         }
 
-        name = strtok(NULL, "\\");
+        name = strtok(NULL, "/");
     }
 
     return ret;
@@ -261,6 +275,11 @@ int fs_mkdir(const char * pathname, mode_t mode)
             }
         }
     }
+    else if (ret == 0 && num_of_paths == 0)
+    {
+        printf("path already exists.\n");
+    }
+    
 
     /*
     if temp dir was used, then reset temp curr 
@@ -278,6 +297,14 @@ int fs_mkdir(const char * pathname, mode_t mode)
 
 int fs_rmdir(const char *pathname) 
 {
+    temp_dir = malloc(VCB->block_size*6);
+                
+    // checking if malloc was successful
+	if (temp_dir == NULL)
+	{
+		printf("ERROR: failed to malloc.\n");
+		exit(-1);
+	}
 
     int ret = parse_pathname(pathname);
 
@@ -302,16 +329,6 @@ int fs_rmdir(const char *pathname)
     // if directory is empty and not root
     if (ret == 0)
     {   
-        
-        temp_dir = malloc(VCB->block_size*6);
-                
-        // checking if malloc was successful
-	    if (temp_dir == NULL)
-	    {
-		    printf("ERROR: failed to malloc.\n");
-		    exit(-1);
-	    }
-
         // getting the parent dir from child
         LBAread(temp_dir, 6, temp_curr_dir[1].starting_block);
 
@@ -372,6 +389,10 @@ int fs_isDir(char * path)
             ret = 1;
         }
     }
+    else
+    {
+        ret = 0; // convert ret from -1 to 0 to return 'false'
+    }
 
     free(temp_curr_dir);
     temp_curr_dir = NULL;
@@ -382,24 +403,25 @@ int fs_isDir(char * path)
 //return 1 if path is file, 0 otherwise
 int fs_isFile(char * path){
     
-    int ret = parse_pathname(path);
+    // int ret = parse_pathname(path);
 
-    if(ret == 0)
-    {
-        for (int i = 2; i < 64; i++)
-        {
-            if(temp_curr_dir[i].filename == saved_filename && temp_curr_dir[i].is_file == 1)
-            {
-                ret = 1;
-                i = 64;
-            }
-        }
-    }
+    // if(ret == 0)
+    // {
+    //     for (int i = 2; i < 64; i++)
+    //     {
+    //         if(temp_curr_dir[i].filename == saved_filename && temp_curr_dir[i].is_file == 1)
+    //         {
+    //             ret = 1;
+    //             i = 64;
+    //         }
+    //     }
+    // }
     
 
-    free(temp_curr_dir);
-    temp_curr_dir = NULL;
-    return ret;
+    // free(temp_curr_dir);
+    // temp_curr_dir = NULL;
+    // return ret;
+    return 0;
 }
 
 int fs_delete(char* filename)
@@ -436,7 +458,7 @@ char * fs_getcwd(char * buf, size_t size)
     char * head_path = malloc(VCB->block_size * 6);
     char * slash = malloc(VCB->block_size * 6);
 
-    strcpy(slash, "\\");
+    strcpy(slash, "/");
    
     strcpy(tail_path, temp_dir[0].filename);
 
@@ -449,7 +471,7 @@ char * fs_getcwd(char * buf, size_t size)
 
         strcpy(tail_path, temp_dir[0].filename);
         memset(slash, 0, sizeof(slash));
-        strcpy(slash, "\\");
+        strcpy(slash, "/");
     }
     
     strcat(tail_path, head_path);
