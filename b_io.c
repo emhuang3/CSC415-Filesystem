@@ -41,8 +41,8 @@ typedef struct b_fcb
 	// holds position in fcbArray	
 	int file_descriptor; 		
 	
-	int len;
-	int pos;
+	int len;	//valid characters
+	int pos;	//position in buf
 
 	int mode; // 1 is write and 0 is no write.
 
@@ -241,6 +241,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		}
 		
 		memcpy(fcbArray[fd].buf + fcbArray[fd].pos, buffer, count);
+		
 
 		// move position up to track how much freespace we have in buf
 		fcbArray[fd].pos += count;
@@ -306,7 +307,15 @@ int b_read (b_io_fd fd, char * buffer, int count)
 		return (-1); 		
 	}
 
+	//len is valid bytes currently filled in buffer 
+	//len - pos 415-45
 	int num_of_bytes = fcbArray[fd].len - fcbArray[fd].pos;
+
+	if(num_of_bytes>count){
+		memcpy(buffer, fcbArray[fd].buf + fcbArray[fd].pos, count);
+		fcbArray[fd].pos += count;
+		return count;
+	}
 
 	if (num_of_bytes == 0)
 	{
