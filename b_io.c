@@ -25,12 +25,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <math.h>
+
 #include "b_io.h"
 #include "dir_func.c"
 
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
-
 
 typedef struct b_fcb
 {
@@ -45,7 +46,7 @@ typedef struct b_fcb
 
 	int mode; // 1 is write and 0 is no write.
 
-	dir_entr * parent_dir;
+	int pos_in_parent;
 	
 } b_fcb;
 
@@ -123,7 +124,10 @@ b_io_fd b_open (char * pathname, int flags)
 		// implies that file does not exist
 		if (ret == -1) 
 		{
-			if (flags == O_CREAT)
+
+			// ---- WARNING: THIS IS SUPPOSED TO CHECK IF FLAG is 'O_CREAT' ---- //
+			// ---- replace with if (flag == O_CREAT) ---- //
+			if (1)
 			{
 				// create this file in parent
 
@@ -134,14 +138,10 @@ b_io_fd b_open (char * pathname, int flags)
 					{
 
 						// marks this position in the parent as occupied
-						//printf("%s\n", temp_curr_dir[i].filename);
-						//printf("%s\n", saved_filename);
 						strcpy(temp_curr_dir[i].filename, saved_filename);
-						//printf("%s\n", temp_curr_dir[i].filename);
-						//printf("%d\n", i);
-						temp_curr_dir[i].starting_block = VCB->free_block_start;
+						temp_curr_dir[i].is_file = 1;
+						fcbArray[returnFd].pos_in_parent = i;
 						i = 64;
-						//LBAwrite(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
 					}
 					else if (i == 63)
 					{
@@ -152,8 +152,7 @@ b_io_fd b_open (char * pathname, int flags)
 			}
 			else
 			{
-				// file doesn't exist. Cannot make this file
-
+				printf("file doesn't exist. Cannot make this file.\n");
 				return -1;
 			}
 		}
@@ -161,10 +160,9 @@ b_io_fd b_open (char * pathname, int flags)
 
 	else
 	{
-		//printf("invalid path.\n");
+		printf("invalid path.\n");
 	}
 
-	fcbArray[returnFd].parent_dir = temp_curr_dir;
 	fcbArray[returnFd].buf = malloc(buffer_size + 1);
 	
 	if (fcbArray[returnFd].buf == NULL)
@@ -178,9 +176,8 @@ b_io_fd b_open (char * pathname, int flags)
 	fcbArray[returnFd].len = 0;
 	fcbArray[returnFd].pos = 0;
 	
-	//printf("opened %s in parent directory: %s, with fd %d.\n", saved_filename, temp_curr_dir[0].filename, returnFd);
-	free(temp_curr_dir);
-		temp_curr_dir = NULL;
+	printf("opened %s in parent directory: %s, with fd %d.\n", saved_filename, temp_curr_dir[0].filename, returnFd);
+
 	return (returnFd);
 }
 
@@ -216,12 +213,64 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	// check that fd is between 0 and (MAXFCBS-1)
 	if ((fd < 0) || (fd >= MAXFCBS))
 	{
-		return (-1); 
+		return (-1);
 	}
 
 		//-------------------------- write to disk ----------------------//
 		int free_space = buffer_size - fcbArray[fd].pos;
 
+		/*
+		len will grow as buffer grows. must update in parent directory, 
+		and will be used to calculate blocks to allocate for writing to disk
+		*/
+
+		if (fcbArray[fd].pos > free_space)
+		{
+			// call realloc to grow buffer
+			buffer_size += 512;
+
+			char * resize = realloc(fcbArray[fd].buf, buffer_size);
+
+			if (resize == NULL)
+			{
+				printf("ERROR: failed to reallocate.\n");
+				return -1;
+			}
+			
+			fcbArray[fd].buf = resize;
+		}
+		
+		memcpy(fcbArray[fd].buf + fcbArray[fd].pos, buffer, count);
+
+		// move position up to track how much freespace we have in buf
+		fcbArray[fd].pos += count;
+		fcbArray[fd].len = fcbArray[fd].pos;
+		
+		// temp for now. 200 = BUFFLEN, implies that less then 200 is probably eof indicator
+		if (count < 200)
+		{
+			// update temp_curr_directory with child's filesize
+			int i = fcbArray[fd].pos_in_parent;
+			temp_curr_dir[i].size = fcbArray[fd].len;
+
+			// write entire file to disk
+			float topnum = (float) fcbArray[fd].len;
+
+			// float tempnum = (float) (topnum/512.0);
+			// printf("tempnum: %f\n", tempnum);
+			// printf("fcbArray[fd].len: %d\n", fcbArray[fd].len);
+
+			int blocks_to_allocate = ceil(topnum/512.0);
+
+			printf("blocks_to_allocate: %d\n", blocks_to_allocate);
+
+			temp_curr_dir[i].starting_block = allocate_space(blocks_to_allocate);
+			LBAwrite(fcbArray[fd].buf, blocks_to_allocate, temp_curr_dir[i].starting_block);
+
+			// update parent directory
+			LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
+		}
+		
 		return ret;
 }
 

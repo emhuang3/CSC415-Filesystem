@@ -8,7 +8,6 @@
 #include <mfs.h>
 #include "freeAlloc.c"
 
-
 dir_entr * temp_dir;      // this is a temp dir for making/removing directories and getting cwd
 dir_entr * temp_curr_dir; // this will represent a temp pointer to current working directory.
 dir_entr * curr_dir;      // this will be kept in memory as a pointer to a current working directory
@@ -188,7 +187,7 @@ int parse_pathname(const char * pathname)
     //check that beginning of pathname is '\'
     if (count_slashes[0] != '/')
     {
-        //printf("ERROR: path must begin with '/'\n\n");
+        printf("ERROR: path must begin with '/'\n\n");
         num_of_paths = -1;
         return -1;
     }
@@ -198,14 +197,14 @@ int parse_pathname(const char * pathname)
     {
         if (count_slashes[i] == '/' && i == strlen(count_slashes) - 1)
         {
-            //printf("ERROR: empty head path after '/'\n\n");
+            printf("ERROR: empty head path after '/'\n\n");
             num_of_paths = -1;
             return -1;
         }
 
         else if (count_slashes[i] == '/' && count_slashes[i + 1] == '/')
         {
-            //printf("ERROR: invalid double '/'\n\n");
+            printf("ERROR: invalid double '/'\n\n");
             num_of_paths = -1;
             return -1;
         }
@@ -435,7 +434,8 @@ int fs_delete(char* filename)
         temp_curr_dir = NULL;
         return ret;
     }
-    else if (temp_curr_dir->is_file != 1){
+    else if (temp_curr_dir->is_file != 1)
+    {
         free(temp_curr_dir);
         temp_curr_dir = NULL;
         printf("%s is not a file", temp_curr_dir->filename);
@@ -593,19 +593,20 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
     {
         return NULL;
     }
-    else if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")!=0)
+    else if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "") !=0 )
     {
        strcpy(dirItem->d_name, temp_curr_dir[dirp->dirEntryPosition].filename);
 
        dirp->dirEntryPosition += 1;
     }
-    else if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")==0)
+    else if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "") == 0)
     {
-        while(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")==0 && dirp->dirEntryPosition <63)
+        while(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "") == 0 && dirp->dirEntryPosition < 63)
         {
 
             dirp->dirEntryPosition += 1;
-            if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "")!=0)
+
+            if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "") != 0)
             {
                 strcpy(dirItem->d_name, temp_curr_dir[dirp->dirEntryPosition].filename);
             }
