@@ -47,6 +47,7 @@ typedef struct b_fcb
 	int mode; // 1 is write and 0 is no write.
 
 	int pos_in_parent;
+	dir_entr * parent_dir;
 	
 } b_fcb;
 
@@ -66,6 +67,7 @@ void b_init ()
 	for (int i = 0; i < MAXFCBS; i++)
 		{
 			// indicates a free fcbArray
+			fcbArray[i].parent_dir = NULL;
 			fcbArray[i].buf = NULL;
 			fcbArray[i].mode = 0;
 		}
@@ -105,7 +107,23 @@ b_io_fd b_open (char * pathname, int flags)
 		return -1;
 	}
 
+	if (fcbArray[returnFd].parent_dir == NULL)
+	{
+		fcbArray[returnFd].parent_dir = malloc(VCB->block_size * 6);
+
+		if (fcbArray[returnFd].parent_dir == NULL)
+		{
+			printf("malloc failed\n");
+			return -1;
+		}
+	}
+	
 	int ret = parse_pathname(pathname);
+
+	LBAread(fcbArray[returnFd].parent_dir, 6, temp_curr_dir[0].starting_block);
+
+	free(temp_curr_dir);
+	temp_curr_dir = NULL;
 
 	// implies that we may have a working file
 	if (ret == -1 && num_of_paths == 0) 
@@ -120,12 +138,12 @@ b_io_fd b_open (char * pathname, int flags)
 			//find a free space to put file in parent directory
 			for (int i = 0; i < 64; i++)
 			{
-				if (strcmp(temp_curr_dir[i].filename, "") == 0)
+				if (strcmp(fcbArray[returnFd].parent_dir[i].filename, "") == 0)
 				{
 
 					// marks this position in the parent as occupied
-					strcpy(temp_curr_dir[i].filename, saved_filename);
-					temp_curr_dir[i].is_file = 1;
+					strcpy(fcbArray[returnFd].parent_dir[i].filename, saved_filename);
+					fcbArray[returnFd].parent_dir[i].is_file = 1;
 					fcbArray[returnFd].pos_in_parent = i;
 					i = 64;
 				}
@@ -147,9 +165,9 @@ b_io_fd b_open (char * pathname, int flags)
 	// file already exists
 	else if (num_of_paths == -2)
 	{
-		printf("file already exists in %s directory\n", temp_curr_dir[0].filename);
-		int file_index = temp_curr_dir[0].temp_file_index;
-		int filesize = temp_curr_dir[file_index].size;
+		printf("file already exists in %s directory\n", fcbArray[returnFd].parent_dir[0].filename);
+		int file_index = fcbArray[returnFd].parent_dir[0].temp_file_index;
+		int filesize = fcbArray[returnFd].parent_dir[file_index].size;
 		int block_count = convert_size_to_blocks(filesize, VCB->block_size);
 
 		fcbArray[returnFd].buf = malloc(filesize + 1);
@@ -164,9 +182,10 @@ b_io_fd b_open (char * pathname, int flags)
 		fcbArray[returnFd].len = filesize;
 		fcbArray[returnFd].pos = 0;
 
-		LBAread(fcbArray[returnFd].buf, block_count, temp_curr_dir[file_index].starting_block);
+		LBAread(fcbArray[returnFd].buf, block_count, fcbArray[returnFd].parent_dir[file_index].starting_block);
 
-		printf("opened %s in parent directory: %s, with fd %d.\n", temp_curr_dir[file_index].filename, temp_curr_dir[0].filename, returnFd);
+		printf("opened %s in parent directory: %s, with fd %d.\n", 
+		fcbArray[returnFd].parent_dir[file_index].filename, fcbArray[returnFd].parent_dir[0].filename, returnFd);
 		return (returnFd);
 	}
 
@@ -190,7 +209,7 @@ b_io_fd b_open (char * pathname, int flags)
 	fcbArray[returnFd].len = 0;
 	fcbArray[returnFd].pos = 0;
 	
-	printf("opened %s in parent directory: %s, with fd %d.\n", saved_filename, temp_curr_dir[0].filename, returnFd);
+	printf("opened %s in parent directory: %s, with fd %d.\n", saved_filename, fcbArray[returnFd].parent_dir[0].filename, returnFd);
 
 	return (returnFd);
 }
@@ -280,26 +299,26 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		{
 			// update temp_curr_directory with child's filesize
 			int i = fcbArray[fd].pos_in_parent;
-			temp_curr_dir[i].size = fcbArray[fd].len;
+			fcbArray[fd].parent_dir[i].size = fcbArray[fd].len;
 
 			// write entire file to disk
 			int block_count = convert_size_to_blocks(fcbArray[fd].len, VCB->block_size);
 
 			printf("blocks_to_allocate: %d\n", block_count);
 
-			temp_curr_dir[i].starting_block = allocate_space(block_count);
-			LBAwrite(fcbArray[fd].buf, block_count, temp_curr_dir[i].starting_block);
+			fcbArray[fd].parent_dir[i].starting_block = allocate_space(block_count);
+			LBAwrite(fcbArray[fd].buf, block_count, fcbArray[fd].parent_dir[i].starting_block);
 
 			// update parent directory
-			LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
+			LBAwrite(fcbArray[fd].parent_dir, 6, fcbArray[fd].parent_dir[0].starting_block);
 
 			//updated VCB
 			LBAwrite(VCB, 1, 0);
 
 			// update current directory if temp_curr_dir is same as current directory
-			if (temp_curr_dir[0].starting_block == curr_dir[0].starting_block)
+			if (fcbArray[fd].parent_dir[0].starting_block == curr_dir[0].starting_block)
 			{
-				LBAread(curr_dir, 6, temp_curr_dir[0].starting_block);
+				LBAread(curr_dir, 6, fcbArray[fd].parent_dir[0].starting_block);
 			}
 			
 		}
@@ -365,9 +384,9 @@ void b_close (b_io_fd fd)
 
 	startup = 0;
 	
-	if (temp_curr_dir != NULL)
-	{
-		free(temp_curr_dir);
-		temp_curr_dir = NULL;
-	}
+	// if (temp_curr_dir != NULL)
+	// {
+	// 	free(temp_curr_dir);
+	// 	temp_curr_dir = NULL;
+	// }
 }
