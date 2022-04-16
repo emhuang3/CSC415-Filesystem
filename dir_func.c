@@ -188,7 +188,7 @@ int parse_pathname(const char * pathname)
     //check that beginning of pathname is '\'
     if (count_slashes[0] != '/')
     {
-        printf("ERROR: path must begin with '/'\n\n");
+        //printf("ERROR: path must begin with '/'\n\n");
         num_of_paths = -1;
         return -1;
     }
@@ -198,14 +198,14 @@ int parse_pathname(const char * pathname)
     {
         if (count_slashes[i] == '/' && i == strlen(count_slashes) - 1)
         {
-            printf("ERROR: empty head path after '/'\n\n");
+            //printf("ERROR: empty head path after '/'\n\n");
             num_of_paths = -1;
             return -1;
         }
 
         else if (count_slashes[i] == '/' && count_slashes[i + 1] == '/')
         {
-            printf("ERROR: invalid double '/'\n\n");
+            //printf("ERROR: invalid double '/'\n\n");
             num_of_paths = -1;
             return -1;
         }

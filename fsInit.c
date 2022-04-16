@@ -116,42 +116,25 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		/// --------------- TEST DIRECTORIES --------------- //
 
 
-<<<<<<< HEAD
-	// fs_mkdir("\\school", 511);
-	// fs_mkdir("\\work", 511);
-	// fs_mkdir("\\personal", 511);
+		// fs_mkdir("/school", 511);
+		// fs_mkdir("/work", 511);
+		// fs_mkdir("/personal", 511);
 
-	// fs_mkdir("\\school\\homework", 511);
-	// fs_mkdir("\\work\\docs", 511);
-	// fs_mkdir("\\personal\\docs", 511);
+		// fs_mkdir("/school/homework", 511);
+		// fs_mkdir("/work/docs", 511);
+		// fs_mkdir("/personal/docs", 511);
 
-	// fs_mkdir("\\school\\notes", 511);
-	// fs_mkdir("\\work\\contacts", 511);
-	// fs_mkdir("\\personal\\games", 511);
+		// fs_mkdir("/school/notes", 511);
+		// fs_mkdir("/work/contacts", 511);
+		// fs_mkdir("/personal/games", 511);
 
-	// fs_mkdir("\\school\\homework\\CSC415", 511);
-	// fs_mkdir("\\work\\misc", 511);
-	// fs_mkdir("\\personal\\misc", 511);
-=======
-		fs_mkdir("/school", 511);
-		fs_mkdir("/work", 511);
-		fs_mkdir("/personal", 511);
+		// fs_mkdir("/school/homework/CSC415", 511);
+		// fs_mkdir("/work/misc", 511);
+		// fs_mkdir("/personal/misc", 511);
 
-		fs_mkdir("/school/homework", 511);
-		fs_mkdir("/work/docs", 511);
-		fs_mkdir("/personal/docs", 511);
+		// int fd = b_open("/personal/misc/newFile.txt", O_CREAT);
 
-		fs_mkdir("/school/notes", 511);
-		fs_mkdir("/work/contacts", 511);
-		fs_mkdir("/personal/games", 511);
-
-		fs_mkdir("/school/homework/CSC415", 511);
-		fs_mkdir("/work/misc", 511);
-		fs_mkdir("/personal/misc", 511);
-
-		int fd = b_open("/personal/misc/newFile.txt", O_CREAT);
-
-		printf("fd: %d\n", fd);
+		// printf("fd: %d\n", fd);
 	}
 
 	if (curr_dir == NULL)
@@ -168,7 +151,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		LBAread(curr_dir, 6, VCB->root_start);
 	}
->>>>>>> a79690410d0f4f2ca0777cf3847ea3902237e6fb
 
 	return 0;
 }

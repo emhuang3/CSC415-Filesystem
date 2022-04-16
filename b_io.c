@@ -31,50 +31,6 @@
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
 
-// dir_entr * currentDir;
-// int dir_ent_position;
-// int load_Dir(char * token){
-//     dir_ent_position = -1;
-//     for(int i = 0; i<64; i++){
-//         if(strcmp(token, currentDir[i].filename)==0){
-//             dir_ent_position = i;
-//             //printf("MATCH token : %s\n", token);
-//             LBAread(currentDir, 6, currentDir[i].starting_block);
-//             //found so reset i to 0 and set currentDir 
-//             //printf("%s\n", currentDir->filename);
-//             break;
-//         }
-//         else if(i ==63){
-//             //printf("This does not exist: %s\n", token);
-//             return -1;
-//         }
-		
-//     }
-//     return dir_ent_position;
-    
-// }
-
-// char * filetoken;
-// //parsePath for opendir ret
-// int parsePath(const char * pathname){
-//     //first load the entire root directory
-//     currentDir = malloc(512*6);
-//     LBAread(currentDir, 6, 6);
-
-//     //store path name into char copy to use in strtok
-//     char * copy = strdup(pathname);
-    
-//     char * token = strtok(copy, "\\");
-    
-//     while(token != NULL){
-//         filetoken = token;
-// 		//printf("%s\n", filename);
-//         dir_ent_position = load_Dir(token);
-//         token = strtok(NULL, "\\");
-//     }
-//     //printf("%d", dir_ent_position);
-//     return dir_ent_position;
-// }
 
 typedef struct b_fcb
 {
@@ -178,9 +134,14 @@ b_io_fd b_open (char * pathname, int flags)
 					{
 
 						// marks this position in the parent as occupied
+						//printf("%s\n", temp_curr_dir[i].filename);
+						//printf("%s\n", saved_filename);
 						strcpy(temp_curr_dir[i].filename, saved_filename);
+						//printf("%s\n", temp_curr_dir[i].filename);
+						//printf("%d\n", i);
 						temp_curr_dir[i].starting_block = VCB->free_block_start;
 						i = 64;
+						//LBAwrite(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
 					}
 					else if (i == 63)
 					{
@@ -200,7 +161,7 @@ b_io_fd b_open (char * pathname, int flags)
 
 	else
 	{
-		printf("invalid path.\n");
+		//printf("invalid path.\n");
 	}
 
 	fcbArray[returnFd].parent_dir = temp_curr_dir;
@@ -217,8 +178,9 @@ b_io_fd b_open (char * pathname, int flags)
 	fcbArray[returnFd].len = 0;
 	fcbArray[returnFd].pos = 0;
 	
-	printf("opened %s in parent directory: %s, with fd %d.\n", saved_filename, temp_curr_dir[0].filename, returnFd);
-
+	//printf("opened %s in parent directory: %s, with fd %d.\n", saved_filename, temp_curr_dir[0].filename, returnFd);
+	free(temp_curr_dir);
+		temp_curr_dir = NULL;
 	return (returnFd);
 }
 

@@ -674,13 +674,15 @@ int main (int argc, char * argv[])
 		cmdin = readline("Prompt > ");
 		//*******************************
 		printf("********************************\n");
-		char * name = "\\home\\student\\test.txt";
+		char * name = "/home/student/test.txt";
 		// int x = b_open(name, O_RDONLY);
 		// printf("Open fd: %d\n", x);
 		// char * name2 = "\\home";
 		// int x2 = b_open(name2, O_RDONLY);
 		// printf("Open fd: %d\n", x2);
-		b_open(name, 0);
+		//b_open(name, O_CREAT);
+		//b_open("/home/student/wat.txt", O_CREAT);
+		
 		
 		printf("********************************\n");
 		//********************************
