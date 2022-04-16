@@ -393,6 +393,7 @@ int cmd_cp2fs (int argcnt, char *argvec[])
 	char * dest;
 	int readcnt;
 	char buf[BUFFERLEN];
+	int ret;
 	
 	switch (argcnt)
 		{
@@ -417,7 +418,12 @@ int cmd_cp2fs (int argcnt, char *argvec[])
 	do 
 		{
 		readcnt = read (linux_fd, buf, BUFFERLEN);
-		b_write (testfs_fd, buf, readcnt);
+		ret = b_write (testfs_fd, buf, readcnt);
+		if (ret == -1)
+		{
+			readcnt--; // breaks while loop
+		}
+		
 		} while (readcnt == BUFFERLEN);
 	b_close (testfs_fd);
 	close (linux_fd);

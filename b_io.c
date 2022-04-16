@@ -112,55 +112,54 @@ b_io_fd b_open (char * pathname, int flags)
 	{
 
 		//check if the file already exists
-		for (int i = 0; i < 63; i++)
+		for (int i = 2; i < 63; i++)
 		{
 			if (strcmp(temp_curr_dir[i].filename, saved_filename) == 0)
 			{
 				printf("File already exists.\n");
-				ret = 0;
+				return -1;
 			}
 		}
 
 		// implies that file does not exist
-		if (ret == -1) 
+
+		// ---- WARNING: THIS IS SUPPOSED TO CHECK IF FLAG is 'O_CREAT' ---- //
+		// ---- replace with if (flag == O_CREAT) ---- //
+		if (1)
 		{
+			// create this file in parent
 
-			// ---- WARNING: THIS IS SUPPOSED TO CHECK IF FLAG is 'O_CREAT' ---- //
-			// ---- replace with if (flag == O_CREAT) ---- //
-			if (1)
+			//find a free space to put file in parent directory
+			for (int i = 0; i < 64; i++)
 			{
-				// create this file in parent
-
-				//find a free space to put file in parent directory
-				for (int i = 0; i < 64; i++)
+				if (strcmp(temp_curr_dir[i].filename, "") == 0)
 				{
-					if (strcmp(temp_curr_dir[i].filename, "") == 0)
-					{
 
-						// marks this position in the parent as occupied
-						strcpy(temp_curr_dir[i].filename, saved_filename);
-						temp_curr_dir[i].is_file = 1;
-						fcbArray[returnFd].pos_in_parent = i;
-						i = 64;
-					}
-					else if (i == 63)
-					{
-						printf("ERROR: unable to find free space in the parent directory.\n");
-						return -1;
-					}
+					// marks this position in the parent as occupied
+					strcpy(temp_curr_dir[i].filename, saved_filename);
+					temp_curr_dir[i].is_file = 1;
+					fcbArray[returnFd].pos_in_parent = i;
+					i = 64;
+				}
+				else if (i == 63)
+				{
+					printf("ERROR: unable to find free space in the parent directory.\n");
+					return -1;
 				}
 			}
-			else
-			{
-				printf("file doesn't exist. Cannot make this file.\n");
-				return -1;
-			}
 		}
+		else
+		{
+			printf("file doesn't exist. Cannot make this file.\n");
+			return -1;
+		}
+		
 	}
 
 	else
 	{
 		printf("invalid path.\n");
+		return -1;
 	}
 
 	fcbArray[returnFd].buf = malloc(buffer_size + 1);
@@ -206,13 +205,14 @@ int b_seek (b_io_fd fd, off_t offset, int whence)
 // Interface to write function	
 int b_write (b_io_fd fd, char * buffer, int count)
 {
-	int ret = 0;
+
 
 	if (startup == 0) b_init();  //Initialize our system
 
 	// check that fd is between 0 and (MAXFCBS-1)
 	if ((fd < 0) || (fd >= MAXFCBS))
 	{
+		printf("cannot write this.\n");
 		return (-1);
 	}
 
@@ -246,7 +246,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		fcbArray[fd].pos += count;
 		fcbArray[fd].len = fcbArray[fd].pos;
 		
-		// temp for now. 200 = BUFFLEN, implies that less then 200 is probably eof indicator
+		// 200 = BUFFLEN, implies that less then 200 is probably eof indicator
 		if (count < 200)
 		{
 			// update temp_curr_directory with child's filesize
@@ -255,10 +255,6 @@ int b_write (b_io_fd fd, char * buffer, int count)
 
 			// write entire file to disk
 			float topnum = (float) fcbArray[fd].len;
-
-			// float tempnum = (float) (topnum/512.0);
-			// printf("tempnum: %f\n", tempnum);
-			// printf("fcbArray[fd].len: %d\n", fcbArray[fd].len);
 
 			int blocks_to_allocate = ceil(topnum/512.0);
 
@@ -269,9 +265,19 @@ int b_write (b_io_fd fd, char * buffer, int count)
 
 			// update parent directory
 			LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
+
+			//updated VCB
+			LBAwrite(VCB, 1, 0);
+
+			// update current directory if temp_curr_dir is same as current directory
+			if (temp_curr_dir[0].starting_block == curr_dir[0].starting_block)
+			{
+				LBAread(curr_dir, 6, temp_curr_dir[0].starting_block);
+			}
+			
 		}
 		
-		return ret;
+		return 0;
 }
 
 
@@ -326,14 +332,16 @@ void b_close (b_io_fd fd)
 	{
 		if (fcbArray[i].buf != NULL)
 		{
+			memset(fcbArray[i].buf, 0, sizeof(fcbArray[i].buf));
 			free(fcbArray[i].buf);
 			fcbArray[i].buf = NULL;
 		}
 	}
 
-	if (temp_curr_dir != NULL)
-	{
-		free(temp_curr_dir);
-		temp_curr_dir = NULL;
-	}
+	free(temp_curr_dir);
+	temp_curr_dir = NULL;
+
+	startup = 0;
+
+	printf("cleaned buffers\n");
 }
