@@ -120,6 +120,14 @@ b_io_fd b_open (char * pathname, int flags)
 	
 	int ret = parse_pathname(pathname);
 
+	// update temp_curr_dir to disk
+	LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
+
+	/*
+	 set fcbArray[returnFd].parent_dir to have its own unique parent.
+	 This is done so that each open fd has its own parent to reference.
+	*/
+
 	LBAread(fcbArray[returnFd].parent_dir, 6, temp_curr_dir[0].starting_block);
 
 	free(temp_curr_dir);
@@ -131,7 +139,7 @@ b_io_fd b_open (char * pathname, int flags)
 
 		// ---- WARNING: THIS IS SUPPOSED TO CHECK IF FLAG is 'O_CREAT' ---- //
 		// ---- replace with if (flag == O_CREAT) ---- //
-		if (1)
+		if (flags & O_CREAT)
 		{
 			// create this file in parent
 
@@ -383,6 +391,13 @@ void b_close (b_io_fd fd)
 	//--------------------------- clean up ------------------------//
 
 	startup = 0;
+
+	for (int i = 0; i < MAXFCBS; i++)
+	{
+		free(fcbArray[i].parent_dir);
+		fcbArray[i].parent_dir = NULL;
+	}
+	
 	
 	// if (temp_curr_dir != NULL)
 	// {
