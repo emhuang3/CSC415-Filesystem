@@ -25,6 +25,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <math.h>
+
 #include "b_io.h"
 #include "dir_func.c"
 
@@ -122,6 +124,9 @@ b_io_fd b_open (char * pathname, int flags)
 		// implies that file does not exist
 		if (ret == -1) 
 		{
+
+			// ---- WARNING: THIS IS SUPPOSED TO CHECK IF FLAG is 'O_CREAT' ---- //
+			// ---- replace with if (flag == O_CREAT) ---- //
 			if (1)
 			{
 				// create this file in parent
@@ -147,8 +152,7 @@ b_io_fd b_open (char * pathname, int flags)
 			}
 			else
 			{
-				// file doesn't exist. Cannot make this file
-
+				printf("file doesn't exist. Cannot make this file.\n");
 				return -1;
 			}
 		}
@@ -214,34 +218,29 @@ int b_write (b_io_fd fd, char * buffer, int count)
 
 		//-------------------------- write to disk ----------------------//
 		int free_space = buffer_size - fcbArray[fd].pos;
-		printf("free_space: %d\n", free_space);
 
 		/*
 		len will grow as buffer grows. must update in parent directory, 
 		and will be used to calculate blocks to allocate for writing to disk
 		*/
 
-		fcbArray[fd].len = buffer_size; 
-		
-		// count is capped at 200 until there is a some left over at the very end.
-
 		if (fcbArray[fd].pos > free_space)
 		{
 			// call realloc to grow buffer
 			buffer_size += 512;
-			char * resized = realloc(fcbArray[fd].buf, buffer_size);
-			printf("buffer_size: %d\n", buffer_size);
 
-			if (resized == NULL)
+			char * resize = realloc(fcbArray[fd].buf, buffer_size);
+
+			if (resize == NULL)
 			{
 				printf("ERROR: failed to reallocate.\n");
 				return -1;
 			}
 			
-			fcbArray[fd].buf = resized;
+			fcbArray[fd].buf = resize;
 		}
 		
-		memcpy(fcbArray[fd].buf, buffer, count);
+		memcpy(fcbArray[fd].buf + fcbArray[fd].pos, buffer, count);
 
 		// move position up to track how much freespace we have in buf
 		fcbArray[fd].pos += count;
@@ -255,9 +254,18 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			temp_curr_dir[i].size = fcbArray[fd].len;
 
 			// write entire file to disk
-			int blocks_to_allocate = ceil(fcbArray[fd].len/512);
+			float topnum = (float) fcbArray[fd].len;
+
+			// float tempnum = (float) (topnum/512.0);
+			// printf("tempnum: %f\n", tempnum);
+			// printf("fcbArray[fd].len: %d\n", fcbArray[fd].len);
+
+			int blocks_to_allocate = ceil(topnum/512.0);
+
+			printf("blocks_to_allocate: %d\n", blocks_to_allocate);
+
 			temp_curr_dir[i].starting_block = allocate_space(blocks_to_allocate);
-			LBAwrite(fcbArray[fd].buf, blocks_to_allocate,temp_curr_dir[i].starting_block);
+			LBAwrite(fcbArray[fd].buf, blocks_to_allocate, temp_curr_dir[i].starting_block);
 
 			// update parent directory
 			LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
