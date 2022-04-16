@@ -111,18 +111,6 @@ b_io_fd b_open (char * pathname, int flags)
 	if (ret == -1 && num_of_paths == 0) 
 	{
 
-		//check if the file already exists
-		for (int i = 2; i < 63; i++)
-		{
-			if (strcmp(temp_curr_dir[i].filename, saved_filename) == 0)
-			{
-				printf("File already exists.\n");
-				return -1;
-			}
-		}
-
-		// implies that file does not exist
-
 		// ---- WARNING: THIS IS SUPPOSED TO CHECK IF FLAG is 'O_CREAT' ---- //
 		// ---- replace with if (flag == O_CREAT) ---- //
 		if (1)
@@ -150,15 +138,23 @@ b_io_fd b_open (char * pathname, int flags)
 		}
 		else
 		{
-			printf("file doesn't exist. Cannot make this file.\n");
+			printf("ERROR: file doesn't exist. Cannot make this file.\n");
 			return -1;
 		}
 		
 	}
 
-	else
+	// file already exists
+	else if (num_of_paths == -2)
 	{
-		printf("invalid path.\n");
+		printf("ERROR: file already exists in %s directory\n", temp_curr_dir[0].filename);
+		return -1;
+	}
+
+	// invalid path given
+	else 
+	{
+		printf("ERROR: invalid path.\n");
 		return -1;
 	}
 
@@ -166,7 +162,7 @@ b_io_fd b_open (char * pathname, int flags)
 	
 	if (fcbArray[returnFd].buf == NULL)
 	{
-		printf("failed to malloc");
+		printf("ERROR: failed to malloc");
 		close (returnFd);	
 		return -1;
 	}
@@ -212,7 +208,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	// check that fd is between 0 and (MAXFCBS-1)
 	if ((fd < 0) || (fd >= MAXFCBS))
 	{
-		printf("cannot write this.\n");
+		printf("ERROR: cannot write this file.\n\n");
 		return (-1);
 	}
 
@@ -342,6 +338,4 @@ void b_close (b_io_fd fd)
 	temp_curr_dir = NULL;
 
 	startup = 0;
-
-	printf("cleaned buffers\n");
 }

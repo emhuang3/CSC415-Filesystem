@@ -120,8 +120,16 @@ int validate_path(char * name)
         if (strcmp(temp_curr_dir[i].filename, name) == 0 && temp_curr_dir[i].is_file)
         {
             
-            printf("cannot set file as current directory.\n");
-            num_of_paths = -1; // cannot make directory
+            printf("ERROR: cannot set file as current directory.\n");
+            if (num_of_paths == 0) // if this was the head path
+            {
+                num_of_paths = -2; // will inform user that this file already exists
+            }
+            else
+            {
+                num_of_paths = -1; // cannot make directory
+            }
+             
             return -1;
         }
 
