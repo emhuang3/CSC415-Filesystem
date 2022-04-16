@@ -28,8 +28,8 @@ typedef struct dir_entr
 	// used tell if this is a file or directory
 	int is_file;
 
-	// stores the number of blocks this dir occupies
-	int count;
+	// stores a temp number that points to a file in its directory
+	int temp_file_index;
 
 	int permissions;
 	

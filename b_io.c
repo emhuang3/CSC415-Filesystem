@@ -147,8 +147,27 @@ b_io_fd b_open (char * pathname, int flags)
 	// file already exists
 	else if (num_of_paths == -2)
 	{
-		printf("ERROR: file already exists in %s directory\n", temp_curr_dir[0].filename);
-		return -1;
+		printf("file already exists in %s directory\n", temp_curr_dir[0].filename);
+		int file_index = temp_curr_dir[0].temp_file_index;
+		int filesize = temp_curr_dir[file_index].size;
+		int block_count = convert_size_to_blocks(filesize, VCB->block_size);
+
+		fcbArray[returnFd].buf = malloc(filesize + 1);
+
+		if (fcbArray[returnFd].buf == NULL)
+		{
+			printf("ERROR: failed to malloc");
+			close (returnFd);	
+			return -1;
+		}
+
+		fcbArray[returnFd].len = filesize;
+		fcbArray[returnFd].pos = 0;
+
+		LBAread(fcbArray[returnFd].buf, block_count, temp_curr_dir[file_index].starting_block);
+
+		printf("opened %s in parent directory: %s, with fd %d.\n", temp_curr_dir[file_index].filename, temp_curr_dir[0].filename, returnFd);
+		return (returnFd);
 	}
 
 	// invalid path given
@@ -212,6 +231,20 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		return (-1);
 	}
 
+	// implies that user might want to overwrite this file
+	if (num_of_paths == -2)
+	{
+		// provide yes or no option before proceeding
+
+		// clear/reset fileinfo in fcbArray[fd]
+
+		// free blocks that file occupies in freespace bitmap
+
+		// temp return
+		return -1;
+	}
+	
+
 		//-------------------------- write to disk ----------------------//
 		int free_space = buffer_size - fcbArray[fd].pos;
 
@@ -250,14 +283,12 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			temp_curr_dir[i].size = fcbArray[fd].len;
 
 			// write entire file to disk
-			float topnum = (float) fcbArray[fd].len;
+			int block_count = convert_size_to_blocks(fcbArray[fd].len, VCB->block_size);
 
-			int blocks_to_allocate = ceil(topnum/512.0);
+			printf("blocks_to_allocate: %d\n", block_count);
 
-			printf("blocks_to_allocate: %d\n", blocks_to_allocate);
-
-			temp_curr_dir[i].starting_block = allocate_space(blocks_to_allocate);
-			LBAwrite(fcbArray[fd].buf, blocks_to_allocate, temp_curr_dir[i].starting_block);
+			temp_curr_dir[i].starting_block = allocate_space(block_count);
+			LBAwrite(fcbArray[fd].buf, block_count, temp_curr_dir[i].starting_block);
 
 			// update parent directory
 			LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
@@ -308,15 +339,23 @@ int b_read (b_io_fd fd, char * buffer, int count)
 		return (-1); 		
 	}
 
-	int num_of_bytes = fcbArray[fd].len - fcbArray[fd].pos;
+	// count is capped at 200
+	int bytes_remaining = fcbArray[fd].len - fcbArray[fd].pos;
 
-	if (num_of_bytes == 0)
+	if (bytes_remaining > count)
 	{
-		/* code */
+		// read contents of fbcArray[fd] into buffer
+		memcpy(buffer, fcbArray[fd].buf + fcbArray[fd].pos, count);
+		fcbArray[fd].pos += count;
+		return (count);
 	}
-	
-		
-	return (0);
+
+	// implies that we are at the last bit of the buffer
+	else
+	{	
+		memcpy(buffer, fcbArray[fd].buf + fcbArray[fd].pos, bytes_remaining);
+		return bytes_remaining;
+	}
 }
 	
 // Interface to Close the file	
@@ -324,18 +363,11 @@ void b_close (b_io_fd fd)
 {
 	//--------------------------- clean up ------------------------//
 
-	for (int i = 0; i < MAXFCBS; i++)
-	{
-		if (fcbArray[i].buf != NULL)
-		{
-			memset(fcbArray[i].buf, 0, sizeof(fcbArray[i].buf));
-			free(fcbArray[i].buf);
-			fcbArray[i].buf = NULL;
-		}
-	}
-
-	free(temp_curr_dir);
-	temp_curr_dir = NULL;
-
 	startup = 0;
+	
+	if (temp_curr_dir != NULL)
+	{
+		free(temp_curr_dir);
+		temp_curr_dir = NULL;
+	}
 }

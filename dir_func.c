@@ -123,7 +123,11 @@ int validate_path(char * name)
             printf("ERROR: cannot set file as current directory.\n");
             if (num_of_paths == 0) // if this was the head path
             {
-                num_of_paths = -2; // will inform user that this file already exists
+                // will open file and inform user that this file already exists
+                num_of_paths = -2; 
+
+                // stores a reference to this file
+                temp_curr_dir[0].temp_file_index = i; 
             }
             else
             {
