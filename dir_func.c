@@ -480,7 +480,6 @@ char * fs_getcwd(char * buf, size_t size)
     
     if (count_paths > 0)
     {
-        printf("check\n");
         strcat(tail_path, head_path);
     }
     
@@ -488,11 +487,11 @@ char * fs_getcwd(char * buf, size_t size)
     strcpy(buf, strcat(slash, tail_path));
 
     // --------- clean and free up temp buffers -------- //
-    memset(tail_path, 0, sizeof(tail_path));
-    memset(head_path, 0, sizeof(head_path));
-    memset(slash, 0, sizeof(slash));
-    memset(temp_dir, 0, sizeof(temp_dir));
+    memset(tail_path, 0, VCB->block_size * 6);
+    memset(head_path, 0, VCB->block_size * 6);
+    memset(slash, 0, VCB->block_size * 6);
 
+    memset(temp_dir, 0, VCB->block_size * 6);
     free(temp_dir);
     temp_dir = NULL;
 
@@ -630,6 +629,7 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
         
         dirp->dirEntryPosition += 1;
     }
+
     
     return dirItem;
 }
