@@ -412,49 +412,85 @@ int fs_isDir(char * path)
 //return 1 if path is file, 0 otherwise
 int fs_isFile(char * path){
     
-    // int ret = parse_pathname(path);
-
-    // if(ret == 0)
-    // {
-    //     for (int i = 2; i < 64; i++)
-    //     {
-    //         if(temp_curr_dir[i].filename == saved_filename && temp_curr_dir[i].is_file == 1)
-    //         {
-    //             ret = 1;
-    //             i = 64;
-    //         }
-    //     }
-    // }
     
-
-    // free(temp_curr_dir);
-    // temp_curr_dir = NULL;
-    // return ret;
     return 0;
 }
 
 int fs_delete(char* filename)
 {
-    char * path = strcat("./", filename);
-    int ret = parse_pathname(path);
-    
-    if (ret == -1 || temp_curr_dir->is_file != 1)
-    {
-        free(temp_curr_dir);
-        temp_curr_dir = NULL;
-        return ret;
-    }
-    else if (temp_curr_dir->is_file != 1)
-    {
-        free(temp_curr_dir);
-        temp_curr_dir = NULL;
-        printf("%s is not a file", temp_curr_dir->filename);
-        return -1;
-    }
-    
-    free(curr_dir);
-    curr_dir = NULL;
-    return ret;
+    // char* pathname = strcat(".\\", filename);
+    // int ret = parse_pathname(pathname);
+
+    // //checking that this directory is not root
+    // if (strcmp(temp_curr_dir[0].filename, ".") == 0)
+    // {
+    //     ret = -1;
+    //     printf("ERROR: cannot remove root directory.\n");
+    // }
+
+    // //checking if path is valid and if temp curr working dir is the file we want
+    // if (ret == 0)
+    // {
+    //     // check that the directory contains specified file
+    //     if (strcmp(temp_curr_dir[0].filename, filename) == 0)
+    //     {
+    //         //getting parent dir
+    //         temp_dir = malloc(VCB->block_size*6);
+            
+    //         // checking if malloc was successful
+    //         if (temp_dir == NULL)
+    //         {
+    //             printf("ERROR: failed to malloc.\n");
+    //             exit(-1);
+    //         }
+
+    //         LBAread(temp_dir, 6, temp_curr_dir[1].starting_block);
+
+    //         //looking for this directory in parent directory, then erasing it from parent directory
+    //         for (int i = 2; i < 64; i++)
+    //         {
+    //             if (strcmp(temp_dir[i].filename, temp_curr_dir[0].filename) == 0)
+    //             {
+    //                 printf("found file [%s] in parent [%s] at index %d.\n", 
+    //                 temp_curr_dir[0].filename, temp_dir[0].filename, i);
+
+    //                 // clearing filename in parent will mark this entry as free to write to
+    //                 memset(temp_dir[i].filename, 0, sizeof(temp_dir[i].filename));
+
+    //                 // free up space in freespace bitmap
+    //                 reallocate_space(temp_curr_dir);
+
+    //                 i = 64;
+    //             }
+
+    //             else if (i == 63)
+    //             {
+    //                 ret = -1;
+    //                 printf("ERROR: cannot find child [%s] in parent [%s].\n", 
+    //                 temp_curr_dir[0].filename, temp_dir[0].filename);
+    //             }
+    //         }
+    //     }
+
+    //     // update parent directory to disk (i.e. temp_dir).
+    //     if (ret == 0)
+    //     {
+    //         LBAwrite(temp_dir, 6, temp_dir[0].starting_block);
+    //         printf("-- updated disk --\n\n");
+    //     }
+    //     else
+    //     {
+    //         printf("fatal error: -- did not update disk --\n\n");
+    //     }
+    // }
+
+    // free(temp_dir);
+    // temp_dir = NULL;
+
+    // free(temp_curr_dir);
+    // temp_curr_dir = NULL;
+
+    return 0;
 }
 
 char * fs_getcwd(char * buf, size_t size) 

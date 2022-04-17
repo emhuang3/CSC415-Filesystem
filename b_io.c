@@ -136,9 +136,6 @@ b_io_fd b_open (char * pathname, int flags)
 	// implies that we may have a working file
 	if (ret == -1 && num_of_paths == 0) 
 	{
-
-		// ---- WARNING: THIS IS SUPPOSED TO CHECK IF FLAG is 'O_CREAT' ---- //
-		// ---- replace with if (flag == O_CREAT) ---- //
 		if (flags & O_CREAT)
 		{
 			// create this file in parent
@@ -167,7 +164,6 @@ b_io_fd b_open (char * pathname, int flags)
 			printf("ERROR: file doesn't exist. Cannot make this file.\n");
 			return -1;
 		}
-		
 	}
 
 	// This will open the existing file
@@ -208,6 +204,7 @@ b_io_fd b_open (char * pathname, int flags)
 		return -1;
 	}
 
+	
 	fcbArray[returnFd].buf = malloc(buffer_size + 1);
 	
 	if (fcbArray[returnFd].buf == NULL)
@@ -221,7 +218,7 @@ b_io_fd b_open (char * pathname, int flags)
 	fcbArray[returnFd].len = 0;
 	fcbArray[returnFd].pos = 0;
 	
-	printf("opened %s in parent directory: %s, with fd %d.\n", saved_filename, fcbArray[returnFd].parent_dir[0].filename, returnFd);
+	printf("opened %s in parent directory: %s with fd %d.\n", saved_filename, fcbArray[returnFd].parent_dir[0].filename, returnFd);
 
 	return (returnFd);
 }
@@ -269,7 +266,6 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			return -1;
 		}
 	}
-	
 
 		//-------------------------- write to disk ----------------------//
 		int free_space = buffer_size - fcbArray[fd].pos;
@@ -294,6 +290,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			
 			fcbArray[fd].buf = resize;
 		}
+		
 		
 		memcpy(fcbArray[fd].buf + fcbArray[fd].pos, buffer, count);
 
