@@ -35,7 +35,7 @@
 
 typedef struct b_fcb
 {
-	//holds the open file buffer
+	// holds the open file buffer
 	char * buf;		
 
 	// holds position in fcbArray	
@@ -43,8 +43,6 @@ typedef struct b_fcb
 	
 	int len;
 	int pos;
-
-	int mode; // 1 is write and 0 is no write.
 
 	int pos_in_parent;
 	dir_entr * parent_dir;
@@ -69,7 +67,6 @@ void b_init ()
 			// indicates a free fcbArray
 			fcbArray[i].parent_dir = NULL;
 			fcbArray[i].buf = NULL;
-			fcbArray[i].mode = 0;
 		}
 
 	startup = 1;
@@ -126,16 +123,11 @@ b_io_fd b_open (char * pathname, int flags)
 		return -1;
 	}
 	
-
-	// update temp_curr_dir to disk
-	LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
-
-	/*
-	 set fcbArray[returnFd].parent_dir to have its own unique parent.
-	 This is done so that each open fd has its own parent to reference.
-	*/
-
+	// set fcbArray[returnFd].parent_dir to have a refererence its own parent.
 	LBAread(fcbArray[returnFd].parent_dir, 6, temp_curr_dir[0].starting_block);
+
+	// copy temp_file_index into fcb's parent_dir
+	fcbArray[returnFd].parent_dir[0].temp_file_index = temp_curr_dir[0].temp_file_index;
 
 	free(temp_curr_dir);
 	temp_curr_dir = NULL;
