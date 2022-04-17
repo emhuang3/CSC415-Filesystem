@@ -35,7 +35,7 @@
 
 typedef struct b_fcb
 {
-	//holds the open file buffer
+	// holds the open file buffer
 	char * buf;		
 
 	// holds position in fcbArray	
@@ -43,8 +43,6 @@ typedef struct b_fcb
 	
 	int len;
 	int pos;
-
-	int mode; // 1 is write and 0 is no write.
 
 	int pos_in_parent;
 	dir_entr * parent_dir;
@@ -69,7 +67,6 @@ void b_init ()
 			// indicates a free fcbArray
 			fcbArray[i].parent_dir = NULL;
 			fcbArray[i].buf = NULL;
-			fcbArray[i].mode = 0;
 		}
 
 	startup = 1;
@@ -120,7 +117,17 @@ b_io_fd b_open (char * pathname, int flags)
 	
 	int ret = parse_pathname(pathname);
 
+	// could not read path
+	if (num_of_paths == -1)
+	{
+		return -1;
+	}
+	
+	// set fcbArray[returnFd].parent_dir to have a refererence its own parent.
 	LBAread(fcbArray[returnFd].parent_dir, 6, temp_curr_dir[0].starting_block);
+
+	// copy temp_file_index into fcb's parent_dir
+	fcbArray[returnFd].parent_dir[0].temp_file_index = temp_curr_dir[0].temp_file_index;
 
 	free(temp_curr_dir);
 	temp_curr_dir = NULL;
@@ -131,8 +138,6 @@ b_io_fd b_open (char * pathname, int flags)
 
 		// ---- WARNING: THIS IS SUPPOSED TO CHECK IF FLAG is 'O_CREAT' ---- //
 		// ---- replace with if (flag == O_CREAT) ---- //
-		// printf("Flags: %d\n", flags);
-		// printf("Create: %d", O_CREAT);
 		if (flags & O_CREAT)
 		{
 			// create this file in parent
@@ -164,10 +169,9 @@ b_io_fd b_open (char * pathname, int flags)
 		
 	}
 
-	// file already exists
-	else if (num_of_paths == -2)
+	// This will open the existing file
+	else if (num_of_paths == -2 && flags & O_CREAT)
 	{
-		printf("file already exists in %s directory\n", fcbArray[returnFd].parent_dir[0].filename);
 		int file_index = fcbArray[returnFd].parent_dir[0].temp_file_index;
 		int filesize = fcbArray[returnFd].parent_dir[file_index].size;
 		int block_count = convert_size_to_blocks(filesize, VCB->block_size);
@@ -176,7 +180,7 @@ b_io_fd b_open (char * pathname, int flags)
 
 		if (fcbArray[returnFd].buf == NULL)
 		{
-			printf("ERROR: failed to malloc");
+			printf("ERROR: failed to malloc\n");
 			close (returnFd);	
 			return -1;
 		}
@@ -186,7 +190,7 @@ b_io_fd b_open (char * pathname, int flags)
 
 		LBAread(fcbArray[returnFd].buf, block_count, fcbArray[returnFd].parent_dir[file_index].starting_block);
 
-		printf("opened %s in parent directory: %s, with fd %d.\n", 
+		printf("opened %s in parent directory: %s with fd %d.\n", 
 		fcbArray[returnFd].parent_dir[file_index].filename, fcbArray[returnFd].parent_dir[0].filename, returnFd);
 		return (returnFd);
 	}
@@ -202,7 +206,7 @@ b_io_fd b_open (char * pathname, int flags)
 	
 	if (fcbArray[returnFd].buf == NULL)
 	{
-		printf("ERROR: failed to malloc");
+		printf("ERROR: failed to malloc\n");
 		close (returnFd);	
 		return -1;
 	}
@@ -215,28 +219,6 @@ b_io_fd b_open (char * pathname, int flags)
 
 	return (returnFd);
 }
-
-
-// Interface to seek function	
-int b_seek (b_io_fd fd, off_t offset, int whence)
-{
-	if (startup == 0) b_init();  //Initialize our system
-
-	// check that fd is between 0 and (MAXFCBS-1)
-	if ((fd < 0) || (fd >= MAXFCBS))
-	{
-		return (-1);
-	}
-
-	if (fcbArray[fd].file_descriptor == -1)
-	{
-		return -1;
-	}
-	
-	return (0);
-}
-
-
 
 // Interface to write function	
 int b_write (b_io_fd fd, char * buffer, int count)
@@ -255,14 +237,30 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	// implies that user might want to overwrite this file
 	if (num_of_paths == -2)
 	{
+		char input[2];
+		printf("file already exists.\n");
+		printf("would you like to overwrite this file? y or n\n");
 		// provide yes or no option before proceeding
 
-		// clear/reset fileinfo in fcbArray[fd]
+		while (strcmp(input, "y") != 0 && strcmp(input, "n") != 0)
+		{
+			scanf("%2s", input);
+		}
+		
+		if (strcmp(input, "y") == 0 )
+		{
+			// begin overwrite process
 
-		// free blocks that file occupies in freespace bitmap
+			// clear/reset fileinfo in fcbArray[fd]
 
-		// temp return
-		return -1;
+			// free blocks that file occupies in freespace bitmap
+		}
+
+		else
+		{
+			printf("did not copy file.\n\n");
+			return -1;
+		}
 	}
 	
 
@@ -283,7 +281,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 
 			if (resize == NULL)
 			{
-				printf("ERROR: failed to reallocate.\n");
+				printf("ERROR: failed to reallocate.\n\n");
 				return -1;
 			}
 			
@@ -322,33 +320,13 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			{
 				LBAread(curr_dir, 6, fcbArray[fd].parent_dir[0].starting_block);
 			}
-			
+
+			printf("finished copying file.\n\n");
 		}
 		
 		return 0;
 }
 
-
-
-// Interface to read a buffer
-
-// Filling the callers request is broken into three parts
-// Part 1 is what can be filled from the current buffer, which may or may not be enough
-// Part 2 is after using what was left in our buffer there is still 1 or more block
-//        size chunks needed to fill the callers request.  This represents the number of
-//        bytes in multiples of the blocksize.
-// Part 3 is a value less than blocksize which is what remains to copy to the callers buffer
-//        after fulfilling part 1 and part 2.  This would always be filled from a refill 
-//        of our buffer.
-//  +-------------+------------------------------------------------+--------+
-//  |             |                                                |        |
-//  | filled from |  filled direct in multiples of the block size  | filled |
-//  | existing    |                                                | from   |
-//  | buffer      |                                                |refilled|
-//  |             |                                                | buffer |
-//  |             |                                                |        |
-//  | Part1       |  Part 2                                        | Part3  |
-//  +-------------+------------------------------------------------+--------+
 int b_read (b_io_fd fd, char * buffer, int count)
 {
 
@@ -375,6 +353,8 @@ int b_read (b_io_fd fd, char * buffer, int count)
 	else
 	{	
 		memcpy(buffer, fcbArray[fd].buf + fcbArray[fd].pos, bytes_remaining);
+		printf("finished copying file.\n\n");
+
 		return bytes_remaining;
 	}
 }
@@ -382,13 +362,14 @@ int b_read (b_io_fd fd, char * buffer, int count)
 // Interface to Close the file	
 void b_close (b_io_fd fd)
 {
+	
 	//--------------------------- clean up ------------------------//
 
 	startup = 0;
-	
-	// if (temp_curr_dir != NULL)
-	// {
-	// 	free(temp_curr_dir);
-	// 	temp_curr_dir = NULL;
-	// }
+
+	for (int i = 0; i < MAXFCBS; i++)
+	{
+		free(fcbArray[i].parent_dir);
+		fcbArray[i].parent_dir = NULL;
+	}
 }
