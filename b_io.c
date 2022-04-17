@@ -228,28 +228,6 @@ b_io_fd b_open (char * pathname, int flags)
 	return (returnFd);
 }
 
-
-// Interface to seek function	
-int b_seek (b_io_fd fd, off_t offset, int whence)
-{
-	if (startup == 0) b_init();  //Initialize our system
-
-	// check that fd is between 0 and (MAXFCBS-1)
-	if ((fd < 0) || (fd >= MAXFCBS))
-	{
-		return (-1);
-	}
-
-	if (fcbArray[fd].file_descriptor == -1)
-	{
-		return -1;
-	}
-	
-	return (0);
-}
-
-
-
 // Interface to write function	
 int b_write (b_io_fd fd, char * buffer, int count)
 {
@@ -343,27 +321,6 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		return 0;
 }
 
-
-
-// Interface to read a buffer
-
-// Filling the callers request is broken into three parts
-// Part 1 is what can be filled from the current buffer, which may or may not be enough
-// Part 2 is after using what was left in our buffer there is still 1 or more block
-//        size chunks needed to fill the callers request.  This represents the number of
-//        bytes in multiples of the blocksize.
-// Part 3 is a value less than blocksize which is what remains to copy to the callers buffer
-//        after fulfilling part 1 and part 2.  This would always be filled from a refill 
-//        of our buffer.
-//  +-------------+------------------------------------------------+--------+
-//  |             |                                                |        |
-//  | filled from |  filled direct in multiples of the block size  | filled |
-//  | existing    |                                                | from   |
-//  | buffer      |                                                |refilled|
-//  |             |                                                | buffer |
-//  |             |                                                |        |
-//  | Part1       |  Part 2                                        | Part3  |
-//  +-------------+------------------------------------------------+--------+
 int b_read (b_io_fd fd, char * buffer, int count)
 {
 
