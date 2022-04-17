@@ -10,6 +10,16 @@
 
 uint8_t * buffer_bitmap;
 
+int convert_size_to_blocks(int byte_size, int block_size) 
+{
+	// write entire file to disk
+	float top_num = (float) byte_size;
+	float bottom_num = (float) block_size;
+	int block_count = ceil(top_num/bottom_num);
+
+	return block_count;
+}
+
 void update_free_block_start() 
 {
 

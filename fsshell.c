@@ -33,7 +33,6 @@
 
 #include "fsLow.h"
 #include "mfs.h"
-#include "b_io.h"
 
 #define PERMISSIONS (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
 
@@ -48,7 +47,7 @@
 #define CMDMV_ON	0
 #define CMDMD_ON	1
 #define CMDRM_ON	1
-#define CMDCP2L_ON	0
+#define CMDCP2L_ON	1
 #define CMDCP2FS_ON	1
 #define CMDCD_ON	1
 #define CMDPWD_ON	1
@@ -140,9 +139,9 @@ int cmd_ls (int argcnt, char *argvec[])
 		{
 		/* These options set their assigned flags to value and return 0 */
 		/* These options don't set flags and return the value */	 
-		{"long",	no_argument, (int*)1, 'l'},  
-		{"all",		no_argument, (int*)1, 'a'},
-		{"help",	no_argument, (int*)1, 'h'},
+		{"long",	no_argument, (int*) 1, 'l'},  
+		{"all",		no_argument, (int*) 1, 'a'},
+		{"help",	no_argument, (int*) 1, 'h'},
 		{0,			0,       0,  0 }
 		};
 		
@@ -394,6 +393,7 @@ int cmd_cp2fs (int argcnt, char *argvec[])
 	char * dest;
 	int readcnt;
 	char buf[BUFFERLEN];
+	int ret;
 	
 	switch (argcnt)
 		{
@@ -418,7 +418,12 @@ int cmd_cp2fs (int argcnt, char *argvec[])
 	do 
 		{
 		readcnt = read (linux_fd, buf, BUFFERLEN);
-		b_write (testfs_fd, buf, readcnt);
+		ret = b_write (testfs_fd, buf, readcnt);
+		if (ret == -1)
+		{
+			readcnt--; // breaks while loop
+		}
+		
 		} while (readcnt == BUFFERLEN);
 	b_close (testfs_fd);
 	close (linux_fd);
@@ -672,20 +677,6 @@ int main (int argc, char * argv[])
 	while (1)
 		{
 		cmdin = readline("Prompt > ");
-		//*******************************
-		//printf("********************************\n");
-		//char * name = "/home/student/file3.txt";
-		// int x = b_open(name, O_RDONLY);
-		// printf("Open fd: %d\n", x);
-		// char * name2 = "\\home";
-		// int x2 = b_open(name2, O_RDONLY);
-		// printf("Open fd: %d\n", x2);
-		//b_open(name, O_CREAT);
-		//b_open("/home/student/wat.txt", O_CREAT);
-		//b_write(0,name, 5);
-		
-		//printf("********************************\n");
-		//********************************
 #ifdef COMMAND_DEBUG
 		printf ("%s\n", cmdin);
 #endif

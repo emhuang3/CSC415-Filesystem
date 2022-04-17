@@ -117,16 +117,23 @@ int validate_path(char * name)
     for (int i = 2; i < 64; i++)
     {
         //checking if this is a file
-        if (temp_curr_dir[i].is_file)
+        if (strcmp(temp_curr_dir[i].filename, name) == 0 && temp_curr_dir[i].is_file)
         {
-            if (num_of_paths == 0)
-            {
-                // save name for file creation
-                memset(saved_filename,0, sizeof(saved_filename));
-                strncpy(saved_filename, name, strlen(name));
-            }
             
-            printf("cannot set file as current directory.\n");
+            printf("ERROR: cannot set file as current directory.\n");
+            if (num_of_paths == 0) // if this was the head path
+            {
+                // will open file and inform user that this file already exists
+                num_of_paths = -2; 
+
+                // stores a reference to this file
+                temp_curr_dir[0].temp_file_index = i; 
+            }
+            else
+            {
+                num_of_paths = -1; // cannot make directory
+            }
+             
             return -1;
         }
 
@@ -165,7 +172,7 @@ int validate_path(char * name)
 
             // save name
             memset(saved_filename,0, sizeof(saved_filename));
-            strncpy(saved_filename, name, strlen(name));
+            strcpy(saved_filename, name);
             return -1;
         }
     }
@@ -449,11 +456,11 @@ int fs_delete(char* filename)
 
 char * fs_getcwd(char * buf, size_t size) 
 {
-
-    // travel backwords from curr_dir and populate an absolute path to display
+    // travel backwords from curr_dir and populate an pathname to display
     temp_dir = malloc(VCB->block_size * 6);
     LBAread(temp_dir, 6, curr_dir[0].starting_block);
 
+    int count_paths = 0; //counts the num of paths
     char * tail_path = malloc(VCB->block_size * 6);
     char * head_path = malloc(VCB->block_size * 6);
     char * slash = malloc(VCB->block_size * 6);
@@ -465,6 +472,7 @@ char * fs_getcwd(char * buf, size_t size)
     // -------- concatinating paths into one complete pathname ------ //
     while (strcmp(tail_path, ".") != 0)
     {
+        count_paths++;
         strcat(tail_path, head_path);
         strcpy(head_path, strcat(slash, tail_path));
         LBAread(temp_dir, 6, temp_dir[1].starting_block);
@@ -474,15 +482,20 @@ char * fs_getcwd(char * buf, size_t size)
         strcpy(slash, "/");
     }
     
-    strcat(tail_path, head_path);
+    if (count_paths > 0)
+    {
+        strcat(tail_path, head_path);
+    }
+    
+    
     strcpy(buf, strcat(slash, tail_path));
 
     // --------- clean and free up temp buffers -------- //
-    memset(tail_path, 0, sizeof(tail_path));
-    memset(head_path, 0, sizeof(head_path));
-    memset(slash, 0, sizeof(slash));
-    memset(temp_dir, 0, sizeof(temp_dir));
+    memset(tail_path, 0, VCB->block_size * 6);
+    memset(head_path, 0, VCB->block_size * 6);
+    memset(slash, 0, VCB->block_size * 6);
 
+    memset(temp_dir, 0, VCB->block_size * 6);
     free(temp_dir);
     temp_dir = NULL;
 
@@ -494,6 +507,8 @@ char * fs_getcwd(char * buf, size_t size)
 
     free(slash);
     slash = NULL;
+
+    
 
     return buf;
 }
@@ -618,6 +633,7 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
         
         dirp->dirEntryPosition += 1;
     }
+
     
     return dirItem;
 }
