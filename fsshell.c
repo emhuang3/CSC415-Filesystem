@@ -478,7 +478,7 @@ int cmd_pwd (int argcnt, char *argvec[])
 		}
 	else
 		{
-		printf ("%s\n", ptr);
+		printf ("%s\n\n", ptr);
 		}
 	free (dir_buf);
 	dir_buf = NULL;

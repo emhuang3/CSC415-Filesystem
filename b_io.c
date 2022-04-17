@@ -120,6 +120,13 @@ b_io_fd b_open (char * pathname, int flags)
 	
 	int ret = parse_pathname(pathname);
 
+	// could not read path
+	if (num_of_paths == -1)
+	{
+		return -1;
+	}
+	
+
 	// update temp_curr_dir to disk
 	LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
 
@@ -170,10 +177,9 @@ b_io_fd b_open (char * pathname, int flags)
 		
 	}
 
-	// file already exists
+	// This will open the existing file
 	else if (num_of_paths == -2)
 	{
-		printf("file already exists in %s directory\n", fcbArray[returnFd].parent_dir[0].filename);
 		int file_index = fcbArray[returnFd].parent_dir[0].temp_file_index;
 		int filesize = fcbArray[returnFd].parent_dir[file_index].size;
 		int block_count = convert_size_to_blocks(filesize, VCB->block_size);
@@ -182,7 +188,7 @@ b_io_fd b_open (char * pathname, int flags)
 
 		if (fcbArray[returnFd].buf == NULL)
 		{
-			printf("ERROR: failed to malloc");
+			printf("ERROR: failed to malloc\n");
 			close (returnFd);	
 			return -1;
 		}
@@ -192,7 +198,7 @@ b_io_fd b_open (char * pathname, int flags)
 
 		LBAread(fcbArray[returnFd].buf, block_count, fcbArray[returnFd].parent_dir[file_index].starting_block);
 
-		printf("opened %s in parent directory: %s, with fd %d.\n", 
+		printf("opened %s in parent directory: %s with fd %d.\n", 
 		fcbArray[returnFd].parent_dir[file_index].filename, fcbArray[returnFd].parent_dir[0].filename, returnFd);
 		return (returnFd);
 	}
@@ -208,7 +214,7 @@ b_io_fd b_open (char * pathname, int flags)
 	
 	if (fcbArray[returnFd].buf == NULL)
 	{
-		printf("ERROR: failed to malloc");
+		printf("ERROR: failed to malloc\n");
 		close (returnFd);	
 		return -1;
 	}
@@ -261,6 +267,8 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	// implies that user might want to overwrite this file
 	if (num_of_paths == -2)
 	{
+		printf("file already exists.\n");
+		printf("would you like to overwrite this file? y or n\n");
 		// provide yes or no option before proceeding
 
 		// clear/reset fileinfo in fcbArray[fd]
@@ -289,7 +297,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 
 			if (resize == NULL)
 			{
-				printf("ERROR: failed to reallocate.\n");
+				printf("ERROR: failed to reallocate.\n\n");
 				return -1;
 			}
 			
@@ -328,7 +336,8 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			{
 				LBAread(curr_dir, 6, fcbArray[fd].parent_dir[0].starting_block);
 			}
-			
+
+			printf("finished copying file.\n\n");
 		}
 		
 		return 0;
@@ -381,6 +390,8 @@ int b_read (b_io_fd fd, char * buffer, int count)
 	else
 	{	
 		memcpy(buffer, fcbArray[fd].buf + fcbArray[fd].pos, bytes_remaining);
+		printf("finished copying file.\n\n");
+
 		return bytes_remaining;
 	}
 }
@@ -388,6 +399,7 @@ int b_read (b_io_fd fd, char * buffer, int count)
 // Interface to Close the file	
 void b_close (b_io_fd fd)
 {
+	
 	//--------------------------- clean up ------------------------//
 
 	startup = 0;
@@ -397,11 +409,4 @@ void b_close (b_io_fd fd)
 		free(fcbArray[i].parent_dir);
 		fcbArray[i].parent_dir = NULL;
 	}
-	
-	
-	// if (temp_curr_dir != NULL)
-	// {
-	// 	free(temp_curr_dir);
-	// 	temp_curr_dir = NULL;
-	// }
 }

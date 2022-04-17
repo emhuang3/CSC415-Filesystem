@@ -120,21 +120,24 @@ int validate_path(char * name)
         if (strcmp(temp_curr_dir[i].filename, name) == 0 && temp_curr_dir[i].is_file)
         {
             
-            printf("ERROR: cannot set file as current directory.\n");
+            
             if (num_of_paths == 0) // if this was the head path
             {
-                // will open file and inform user that this file already exists
+                printf("openning file...\n");
+
+                // this will be marked -2 to open this existing file
                 num_of_paths = -2; 
 
                 // stores a reference to this file
                 temp_curr_dir[0].temp_file_index = i; 
+                return -1;
             }
             else
             {
+                printf("ERROR: cannot set file as current directory.\n");
                 num_of_paths = -1; // cannot make directory
+                return -1;
             }
-             
-            return -1;
         }
 
         // this path was found while more paths still need to be searched
@@ -194,7 +197,7 @@ int parse_pathname(const char * pathname)
     //check that beginning of pathname is '\'
     if (count_slashes[0] != '/')
     {
-        printf("ERROR: path must begin with '/'\n\n");
+        printf("ERROR: path must begin with '/'\n");
         num_of_paths = -1;
         return -1;
     }
@@ -204,14 +207,14 @@ int parse_pathname(const char * pathname)
     {
         if (count_slashes[i] == '/' && i == strlen(count_slashes) - 1)
         {
-            printf("ERROR: empty head path after '/'\n\n");
+            printf("ERROR: empty head path after '/'\n");
             num_of_paths = -1;
             return -1;
         }
 
         else if (count_slashes[i] == '/' && count_slashes[i + 1] == '/')
         {
-            printf("ERROR: invalid double '/'\n\n");
+            printf("ERROR: invalid double '/'\n");
             num_of_paths = -1;
             return -1;
         }
@@ -641,6 +644,7 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
 //used in displayFiles()
 int fs_closedir(fdDir *dirp)
 {
+    printf("\n");
     // clean and free up the memory you allocated for opendir
     if (temp_curr_dir != NULL)
     {
