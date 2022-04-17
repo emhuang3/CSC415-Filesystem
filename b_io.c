@@ -170,7 +170,7 @@ b_io_fd b_open (char * pathname, int flags)
 	}
 
 	// This will open the existing file
-	else if (num_of_paths == -2)
+	else if (num_of_paths == -2 && flags & O_CREAT)
 	{
 		int file_index = fcbArray[returnFd].parent_dir[0].temp_file_index;
 		int filesize = fcbArray[returnFd].parent_dir[file_index].size;
