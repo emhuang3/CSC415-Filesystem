@@ -237,16 +237,30 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	// implies that user might want to overwrite this file
 	if (num_of_paths == -2)
 	{
+		char input[2];
 		printf("file already exists.\n");
 		printf("would you like to overwrite this file? y or n\n");
 		// provide yes or no option before proceeding
 
-		// clear/reset fileinfo in fcbArray[fd]
+		while (strcmp(input, "y") != 0 && strcmp(input, "n") != 0)
+		{
+			scanf("%2s", input);
+		}
+		
+		if (strcmp(input, "y") == 0 )
+		{
+			// begin overwrite process
 
-		// free blocks that file occupies in freespace bitmap
+			// clear/reset fileinfo in fcbArray[fd]
 
-		// temp return
-		return -1;
+			// free blocks that file occupies in freespace bitmap
+		}
+
+		else
+		{
+			printf("did not copy file.\n\n");
+			return -1;
+		}
 	}
 	
 
