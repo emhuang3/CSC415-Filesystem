@@ -89,6 +89,7 @@ b_io_fd b_getFCB ()
 // Modification of interface for this assignment, flags match the Linux flags for open
 // O_RDONLY, O_WRONLY, or O_RDWR
 
+int overwrite = 0;
 b_io_fd b_open (char * pathname, int flags)
 {
 	b_io_fd returnFd;
@@ -170,8 +171,13 @@ b_io_fd b_open (char * pathname, int flags)
 	}
 
 	// This will open the existing file
-	else if (num_of_paths == -2 && flags & O_CREAT)
+	else if (num_of_paths == -2)
 	{
+		if (flags & O_CREAT)
+		{
+			overwrite = 1;
+		}
+		
 		int file_index = fcbArray[returnFd].parent_dir[0].temp_file_index;
 		int filesize = fcbArray[returnFd].parent_dir[file_index].size;
 		int block_count = convert_size_to_blocks(filesize, VCB->block_size);
@@ -235,8 +241,9 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	}
 
 	// implies that user might want to overwrite this file
-	if (num_of_paths == -2)
+	if (overwrite == 1)
 	{
+		overwrite = 0;
 		char input[2];
 		printf("file already exists.\n");
 		printf("would you like to overwrite this file? y or n\n");

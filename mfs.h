@@ -37,7 +37,8 @@ typedef u_int32_t uint32_t;
 struct fs_diriteminfo
 	{
     unsigned short d_reclen;    /* length of this record */
-    unsigned char fileType;    
+    unsigned char fileType;
+	int size;    
     char d_name[256]; 			/* filename max filename is 255 characters */
 	};
 
@@ -52,6 +53,7 @@ typedef struct
 	unsigned short  d_reclen;		/*length of this record */
 	unsigned short	dirEntryPosition;	/*which directory entry position, like file pos */
 	uint64_t	directoryStartLocation;		/*Starting LBA of directory */
+	int size;
 	char * filepath;
 	} fdDir;
 

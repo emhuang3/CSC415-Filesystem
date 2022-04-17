@@ -597,15 +597,17 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
      so we can just check inside temp_curr_dir if it is a file or not
     */
 
-    if (temp_curr_dir[0].is_file == 0)
+    if (temp_curr_dir[dirp->dirEntryPosition].is_file == 0)
     {
-        dirItem->fileType = FT_DIRECTORY;
+        dirItem->fileType = 0;
     }
 
-    if (temp_curr_dir[0].is_file == 1)
+    if (temp_curr_dir[dirp->dirEntryPosition].is_file == 1)
     {
-        dirItem->fileType = FT_REGFILE;
+        dirItem->fileType = 1;
     }
+
+    dirItem->size = temp_curr_dir[dirp->dirEntryPosition].size;
 
     if (dirp->dirEntryPosition >= 63)
     {
