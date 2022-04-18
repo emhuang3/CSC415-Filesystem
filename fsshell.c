@@ -108,7 +108,7 @@ int displayFiles (fdDir * dirp, int flall, int fllong)
 			if (fllong)
 				{
 				fs_stat (di->d_name, &statbuf);
-				printf ("%d    %9ld   %s\n", di->fileType, statbuf.st_size, di->d_name);
+				printf ("%s    %9d   %s\n", di->fileType?"-":"D", di->size, di->d_name);
 				}
 			else
 				{
@@ -244,6 +244,7 @@ int cmd_cp (int argcnt, char *argvec[])
 	char * dest;
 	int readcnt;
 	char buf[BUFFERLEN];
+	int ret;
 	
 	switch (argcnt)
 		{
@@ -266,10 +267,14 @@ int cmd_cp (int argcnt, char *argvec[])
 	testfs_src_fd = b_open (src, O_RDONLY);
 	testfs_dest_fd = b_open (dest, O_WRONLY | O_CREAT | O_TRUNC);
 	do 
-		{
+	{
 		readcnt = b_read (testfs_src_fd, buf, BUFFERLEN);
-		b_write (testfs_dest_fd, buf, readcnt);
-		} while (readcnt == BUFFERLEN);
+		ret = b_write (testfs_dest_fd, buf, readcnt);
+		if (ret < 0)
+		{
+			readcnt--;
+		}
+	} while (readcnt == BUFFERLEN);
 	b_close (testfs_src_fd);
 	b_close (testfs_dest_fd);
 #endif
@@ -677,6 +682,10 @@ int main (int argc, char * argv[])
 	while (1)
 		{
 		cmdin = readline("Prompt > ");
+		//char * name = "/home";
+		// fs_isDir(name);
+		// fs_isFile(name);
+		//fs_delete("/home/student/test.txt");
 #ifdef COMMAND_DEBUG
 		printf ("%s\n", cmdin);
 #endif

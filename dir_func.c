@@ -227,7 +227,7 @@ int parse_pathname(const char * pathname)
 
     // calling str_tok to divide pathname into tokens
     char * name = strtok(buffer_pathname, "/");
-    
+    //printf("Buffer path name: %s\n", buffer_pathname);
     while (name != NULL)
     {
 
@@ -237,7 +237,6 @@ int parse_pathname(const char * pathname)
         {
             return ret;
         }
-
         name = strtok(NULL, "/");
     }
 
@@ -405,57 +404,24 @@ int fs_isDir(char * path)
 
     free(temp_curr_dir);
     temp_curr_dir = NULL;
-    
+    //printf("is_Dir: %d\n", ret);
     return ret;
 }
 
 //return 1 if path is file, 0 otherwise
 int fs_isFile(char * path){
-    
-    // int ret = parse_pathname(path);
-
-    // if(ret == 0)
-    // {
-    //     for (int i = 2; i < 64; i++)
-    //     {
-    //         if(temp_curr_dir[i].filename == saved_filename && temp_curr_dir[i].is_file == 1)
-    //         {
-    //             ret = 1;
-    //             i = 64;
-    //         }
-    //     }
-    // }
-    
-
-    // free(temp_curr_dir);
-    // temp_curr_dir = NULL;
-    // return ret;
-    return 0;
-}
-
-int fs_delete(char* filename)
-{
-    char * path = strcat("./", filename);
-    int ret = parse_pathname(path);
-    
-    if (ret == -1 || temp_curr_dir->is_file != 1)
-    {
-        free(temp_curr_dir);
-        temp_curr_dir = NULL;
-        return ret;
+    int ret = fs_isDir(path);
+    if(ret == 1){
+        ret = 0;
     }
-    else if (temp_curr_dir->is_file != 1)
-    {
-        free(temp_curr_dir);
-        temp_curr_dir = NULL;
-        printf("%s is not a file", temp_curr_dir->filename);
-        return -1;
+    else{
+        ret = 1;
     }
-    
-    free(curr_dir);
-    curr_dir = NULL;
+    //printf("is file : %d\n", ret);
     return ret;
 }
+
+
 
 char * fs_getcwd(char * buf, size_t size) 
 {
@@ -597,15 +563,17 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
      so we can just check inside temp_curr_dir if it is a file or not
     */
 
-    if (temp_curr_dir[0].is_file == 0)
+    if (temp_curr_dir[dirp->dirEntryPosition].is_file == 0)
     {
-        dirItem->fileType = FT_DIRECTORY;
+        dirItem->fileType = 0;
     }
 
-    if (temp_curr_dir[0].is_file == 1)
+    if (temp_curr_dir[dirp->dirEntryPosition].is_file == 1)
     {
-        dirItem->fileType = FT_REGFILE;
+        dirItem->fileType = 1;
     }
+
+    dirItem->size = temp_curr_dir[dirp->dirEntryPosition].size;
 
     if (dirp->dirEntryPosition >= 63)
     {
@@ -665,6 +633,8 @@ int fs_closedir(fdDir *dirp)
     return 0;
 }
 
+
+
 //everything except block size seems to be optional
 int fs_stat(const char *path, struct fs_stat *buf)
 {
@@ -684,4 +654,56 @@ int fs_stat(const char *path, struct fs_stat *buf)
 	// time_t    st_createtime;   	/* time of last status change */
 
     return 0;
+}
+
+
+int fs_delete(char* filename)
+{   
+    dir_entr * fileEntry = malloc(sizeof(dir_entr));
+    
+    int ret = parse_pathname(filename);
+    //printf("%s\n", filename);
+    char * token = strtok(filename, "/");
+    while(token != NULL){
+        //printf("%s\n", token);
+        strcpy(fileEntry->filename, token);
+        token = strtok(NULL, "/");
+    }
+
+    //printf("File Entry name is: %s\n", fileEntry->filename);
+    //printf("Temp Dir: %s\n", temp_dir->filename);
+    //printf("Curr_Dir: %s\n", temp_curr_dir->filename);
+    LBAread(temp_curr_dir, 6, temp_curr_dir->starting_block);
+    //printf("Starting Block%d\n", temp_curr_dir->starting_block);
+    //printf("Duplicate: %s\n", file);
+    for(int i = 0; i< 64; i++){
+        if(strcmp(fileEntry->filename, temp_curr_dir[i].filename)==0){
+            fileEntry->size = temp_curr_dir[i].size;
+            //printf("File entry size: %d\n", fileEntry->size);
+            fileEntry->starting_block = temp_curr_dir[i].starting_block;
+            //printf("Match at loc %d\n", i);
+            //printf("File to be deleted: %s\n", temp_curr_dir[i].filename);
+            memset(temp_curr_dir[i].filename, 0, sizeof(temp_curr_dir[i].filename));
+            //printf("File to be deleted 2: %s\n", temp_curr_dir[i].filename);
+            //printf("temp cur i starting block: %d\n", fileEntry->starting_block);
+            reallocate_space(fileEntry);
+            // strcpy(temp_curr_dir[i].filename, "");
+            i = 64;
+        }
+        if(i ==63){
+            printf("The file does not exist\n");
+        }
+        //cp2fs /home/student/Documents/test.txt /home/test.txt
+       
+        LBAwrite(temp_curr_dir, 6, temp_curr_dir->starting_block);
+    }
+
+    
+    memset(temp_curr_dir, 0, sizeof(temp_curr_dir));
+    free(temp_dir);
+    temp_dir = NULL;
+    free(temp_curr_dir);
+    temp_curr_dir = NULL;
+    return 0;
+
 }

@@ -115,9 +115,12 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		/// --------------- TEST DIRECTORIES --------------- //
 
-		// fs_mkdir("/school", 511);
-		// fs_mkdir("/work", 511);
-		// fs_mkdir("/personal", 511);
+		fs_mkdir("/school", 511);
+		fs_mkdir("/work", 511);
+		fs_mkdir("/personal", 511);
+		fs_mkdir("/home", 511);
+		fs_mkdir("/home/student", 511);
+		fs_mkdir("/home/student/Docs", 511);
 	}
 
 	if (curr_dir == NULL)

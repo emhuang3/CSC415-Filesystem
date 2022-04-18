@@ -89,6 +89,7 @@ b_io_fd b_getFCB ()
 // Modification of interface for this assignment, flags match the Linux flags for open
 // O_RDONLY, O_WRONLY, or O_RDWR
 
+int overwrite = 0;
 b_io_fd b_open (char * pathname, int flags)
 {
 	b_io_fd returnFd;
@@ -135,9 +136,6 @@ b_io_fd b_open (char * pathname, int flags)
 	// implies that we may have a working file
 	if (ret == -1 && num_of_paths == 0) 
 	{
-
-		// ---- WARNING: THIS IS SUPPOSED TO CHECK IF FLAG is 'O_CREAT' ---- //
-		// ---- replace with if (flag == O_CREAT) ---- //
 		if (flags & O_CREAT)
 		{
 			// create this file in parent
@@ -166,12 +164,16 @@ b_io_fd b_open (char * pathname, int flags)
 			printf("ERROR: file doesn't exist. Cannot make this file.\n");
 			return -1;
 		}
-		
 	}
 
 	// This will open the existing file
-	else if (num_of_paths == -2 && flags & O_CREAT)
+	else if (num_of_paths == -2)
 	{
+		if (flags & O_CREAT)
+		{
+			overwrite = 1;
+		}
+		
 		int file_index = fcbArray[returnFd].parent_dir[0].temp_file_index;
 		int filesize = fcbArray[returnFd].parent_dir[file_index].size;
 		int block_count = convert_size_to_blocks(filesize, VCB->block_size);
@@ -202,6 +204,7 @@ b_io_fd b_open (char * pathname, int flags)
 		return -1;
 	}
 
+	
 	fcbArray[returnFd].buf = malloc(buffer_size + 1);
 	
 	if (fcbArray[returnFd].buf == NULL)
@@ -215,7 +218,7 @@ b_io_fd b_open (char * pathname, int flags)
 	fcbArray[returnFd].len = 0;
 	fcbArray[returnFd].pos = 0;
 	
-	printf("opened %s in parent directory: %s, with fd %d.\n", saved_filename, fcbArray[returnFd].parent_dir[0].filename, returnFd);
+	printf("opened %s in parent directory: %s with fd %d.\n", saved_filename, fcbArray[returnFd].parent_dir[0].filename, returnFd);
 
 	return (returnFd);
 }
@@ -235,8 +238,9 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	}
 
 	// implies that user might want to overwrite this file
-	if (num_of_paths == -2)
+	if (overwrite == 1)
 	{
+		overwrite = 0;
 		char input[2];
 		printf("file already exists.\n");
 		printf("would you like to overwrite this file? y or n\n");
@@ -262,7 +266,6 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			return -1;
 		}
 	}
-	
 
 		//-------------------------- write to disk ----------------------//
 		int free_space = buffer_size - fcbArray[fd].pos;
@@ -287,6 +290,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			
 			fcbArray[fd].buf = resize;
 		}
+		
 		
 		memcpy(fcbArray[fd].buf + fcbArray[fd].pos, buffer, count);
 

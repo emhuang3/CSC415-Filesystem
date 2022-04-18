@@ -170,8 +170,15 @@ void init_bitmap()
 
 void reallocate_space(dir_entr * directory)
 {
+	int count;
 	// get num of blocks this directory occupies
-	int count = ceil(directory[0].size/512);
+	if(directory->size != directory[0].size){
+		count = ceil(directory->size/512);
+	}
+	else{
+		count = ceil(directory[0].size/512);
+	}
+	//count = ceil(directory[0].size/512);
 	
 	// update bitmap buffer
 	if (buffer_bitmap == NULL)
@@ -192,7 +199,7 @@ void reallocate_space(dir_entr * directory)
 	
 
 	printf("Blocks freed: ");
-	for (int i = directory[0].starting_block; i < directory[0].starting_block + count; i++)
+	for (int i = directory[0].starting_block; i <= directory[0].starting_block + count; i++)
 	{
 		buffer_bitmap[i] = 0;
 		printf("%d ", i);
