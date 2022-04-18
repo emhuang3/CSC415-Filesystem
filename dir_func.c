@@ -128,7 +128,7 @@ int validate_path(char * name)
                 // this will be marked -2 to open this existing file
                 num_of_paths = -2; 
 
-                // stores a reference to this file
+                // stores a reference to this filef
                 temp_curr_dir[0].temp_file_index = i; 
                 return -1;
             }
@@ -658,7 +658,7 @@ int fs_stat(const char *path, struct fs_stat *buf)
 
 
 int fs_delete(char* filename)
-{   
+ {   
     dir_entr * fileEntry = malloc(sizeof(dir_entr));
     
     int ret = parse_pathname(filename);
@@ -698,12 +698,14 @@ int fs_delete(char* filename)
         LBAwrite(temp_curr_dir, 6, temp_curr_dir->starting_block);
     }
 
-    
+    memset(fileEntry, 0, sizeof(fileEntry));
     memset(temp_curr_dir, 0, sizeof(temp_curr_dir));
+    free(fileEntry);
+    fileEntry = NULL;
     free(temp_dir);
     temp_dir = NULL;
     free(temp_curr_dir);
     temp_curr_dir = NULL;
-    return 0;
+     return 0;
 
 }

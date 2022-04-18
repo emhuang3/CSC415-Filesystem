@@ -270,11 +270,13 @@ int cmd_cp (int argcnt, char *argvec[])
 	{
 		readcnt = b_read (testfs_src_fd, buf, BUFFERLEN);
 		ret = b_write (testfs_dest_fd, buf, readcnt);
-		if (ret < 0)
+		
+		if (ret == -1)
 		{
 			readcnt--;
 		}
 	} while (readcnt == BUFFERLEN);
+
 	b_close (testfs_src_fd);
 	b_close (testfs_dest_fd);
 #endif
