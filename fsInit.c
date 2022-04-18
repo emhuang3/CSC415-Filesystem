@@ -84,11 +84,11 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	
 	//checking if magic number is a match
-	if (VCB->magic_num != 3)
+	if (VCB->magic_num != 5)
 	{
 		flush_blocks(numberOfBlocks, blockSize);
 
-		VCB->magic_num = 3;
+		VCB->magic_num = 5;
 		VCB->total_blocks = numberOfBlocks;
 		VCB->block_size = blockSize;
 		
@@ -141,6 +141,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 void exitFileSystem ()
 {	
+
+
 	if (curr_dir != NULL)
 	{
 		free(curr_dir);

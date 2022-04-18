@@ -65,7 +65,9 @@ int allocate_space(int amount_to_alloc)
 	// creating buffer_bitmap to read the freespace from disk
 	if (buffer_bitmap == NULL)
 	{
-		buffer_bitmap = malloc(sizeof(buffer_bitmap) * VCB->total_blocks);
+		printf("check\n");
+		buffer_bitmap = malloc(VCB->total_blocks);
+		
 
 		// checking if malloc was successful
 		if (buffer_bitmap == NULL)
