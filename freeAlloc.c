@@ -30,7 +30,7 @@ void update_free_block_start()
 
 	if (buffer_bitmap == NULL)
 	{
-		buffer_bitmap = malloc(sizeof(buffer_bitmap) * VCB->total_blocks);
+		buffer_bitmap = malloc(VCB->total_blocks);
 		
 		// checking if malloc was successful
 		if (buffer_bitmap == NULL)
@@ -65,7 +65,6 @@ int allocate_space(int amount_to_alloc)
 	// creating buffer_bitmap to read the freespace from disk
 	if (buffer_bitmap == NULL)
 	{
-		printf("check\n");
 		buffer_bitmap = malloc(VCB->total_blocks);
 		
 
@@ -85,7 +84,7 @@ int allocate_space(int amount_to_alloc)
 	If it is occupued, move() will move the contents of the block somewhere else.
 	*/
 
-	printf("These positions are given to caller and written to disk: \n");
+	// printf("These positions are given to caller and written to disk: \n");
 	for (int i = VCB->free_block_start ; i < VCB->total_blocks; i++)
 	{
 		
@@ -95,13 +94,13 @@ int allocate_space(int amount_to_alloc)
 			// block is free. Nothing to move
 			if (buffer_bitmap[i] == 0)
 			{
-				printf("block %d freely written to \n", i);
+				// printf("block %d freely written to \n", i);
 				buffer_bitmap[i] = 1;
 				j++;
 			}
 			else
 			{
-				printf("block %d was moved then written to \n", i);
+				// printf("block %d was moved then written to \n", i);
 
 				//run a move() function to move stuff in block somewhere else.
 				buffer_bitmap[i] = 1;
@@ -128,7 +127,7 @@ int allocate_space(int amount_to_alloc)
 		}
 
 	}
-	printf("\n");
+	// printf("\n");
 
 	// push updated bitmap to disk
 	LBAwrite(buffer_bitmap, 5, 1);
@@ -147,7 +146,7 @@ void init_bitmap()
 	// creating bitmap for free space for the first time
 	if (buffer_bitmap == NULL)
 	{
-		buffer_bitmap = malloc(sizeof(buffer_bitmap) * VCB->total_blocks);
+		buffer_bitmap = malloc(VCB->total_blocks);
 
 		// checking if malloc was successful
 		if (buffer_bitmap == NULL)
@@ -185,7 +184,7 @@ void reallocate_space(dir_entr * directory)
 	// update bitmap buffer
 	if (buffer_bitmap == NULL)
 	{
-		buffer_bitmap = malloc(sizeof(buffer_bitmap) * VCB->total_blocks);
+		buffer_bitmap = malloc(VCB->total_blocks);
 
 		// check if malloc was successful
 		if (buffer_bitmap == NULL)

@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <mfs.h>
 #include "freeAlloc.c"
+#include <time.h>
+
 
 dir_entr * temp_dir;      // this is a temp dir for making/removing directories and getting cwd
 dir_entr * temp_curr_dir; // this will represent a temp pointer to current working directory.
@@ -45,6 +47,7 @@ void create_dir(char * name, int permissions)
     }
     else // if not root
     {
+
         temp_dir[0].starting_block = allocate_space(6);
         temp_dir[1].starting_block = temp_curr_dir->starting_block;
         temp_dir[0].permissions = permissions;
@@ -123,7 +126,6 @@ int validate_path(char * name)
             
             if (num_of_paths == 0) // if this was the head path
             {
-                printf("openning file...\n");
 
                 // this will be marked -2 to open this existing file
                 num_of_paths = -2; 
@@ -266,7 +268,8 @@ int fs_mkdir(const char * pathname, mode_t mode)
                 temp_curr_dir[i].starting_block = VCB->free_block_start;
                 temp_curr_dir[i].permissions = mode;
                 temp_curr_dir[i].size = 3072; // size will always start here and then dynamically grow when entries fill up
-               
+
+
                 // creating the child directory
                 create_dir(saved_filename, mode);
 
@@ -379,8 +382,11 @@ int fs_rmdir(const char *pathname)
     free(temp_dir);
     temp_dir = NULL;
 
-    free(temp_curr_dir);
-    temp_curr_dir = NULL;
+    if (temp_curr_dir != NULL)
+    {
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
 
     return ret;
 }
@@ -402,9 +408,14 @@ int fs_isDir(char * path)
         ret = 0; // convert ret from -1 to 0 to return 'false'
     }
 
-    free(temp_curr_dir);
-    temp_curr_dir = NULL;
-    //printf("is_Dir: %d\n", ret);
+    if (temp_curr_dir != NULL)
+    {
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
+    
+
+    
     return ret;
 }
 
@@ -514,16 +525,8 @@ fdDir * fs_opendir(const char * name)
 {
     
     int ret = 0;
-
-    name_check = malloc (4097);
-
-    if (name_check == NULL)
-    {
-        printf("ERROR: malloc failed.\n");
-        exit(-1);
-    }
     
-    if (strcmp(name, fs_getcwd(name_check, 4097)) != 0)
+    if (name != NULL)
     {
         ret = parse_pathname(name);
     }
@@ -619,10 +622,6 @@ int fs_closedir(fdDir *dirp)
         free(temp_curr_dir);
         temp_curr_dir = NULL;
     }
-        
-    memset(name_check, 0, sizeof(name_check));
-    free(name_check);
-    name_check = NULL;
     
     free(dirp);
     dirp = NULL;
@@ -648,11 +647,11 @@ int fs_stat(const char *path, struct fs_stat *buf)
     buf->st_blocks = 6;
     
 	// time_t    st_accesstime;   	/* time of last access */
-
+    
 	// time_t    st_modtime;   	/* time of last modification */
 
 	// time_t    st_createtime;   	/* time of last status change */
-
+    
     return 0;
 }
 
@@ -709,3 +708,5 @@ int fs_delete(char* filename)
      return 0;
 
 }
+
+

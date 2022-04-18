@@ -109,6 +109,7 @@ int displayFiles (fdDir * dirp, int flall, int fllong)
 				{
 				fs_stat (di->d_name, &statbuf);
 				printf ("%s    %9d   %s\n", di->fileType?"-":"D", di->size, di->d_name);
+				
 				}
 			else
 				{
@@ -221,9 +222,9 @@ int cmd_ls (int argcnt, char *argvec[])
 		}
 	else   // no pathname/filename specified - use cwd
 		{
-		char * path = fs_getcwd(cwd, DIRMAX_LEN);	//get current working directory
+		// char * path = fs_getcwd(cwd, DIRMAX_LEN);	//get current working directory
 		fdDir * dirp;
-		dirp = fs_opendir (path);
+		dirp = fs_opendir (NULL);
 		return (displayFiles (dirp, flall, fllong));
 		}
 #endif
@@ -276,7 +277,7 @@ int cmd_cp (int argcnt, char *argvec[])
 			readcnt--;
 		}
 	} while (readcnt == BUFFERLEN);
-
+	printf("\n");
 	b_close (testfs_src_fd);
 	b_close (testfs_dest_fd);
 #endif
@@ -382,6 +383,7 @@ int cmd_cp2l (int argcnt, char *argvec[])
 		readcnt = b_read (testfs_fd, buf, BUFFERLEN);
 		write (linux_fd, buf, readcnt);
 		} while (readcnt == BUFFERLEN);
+	printf("\n");
 	b_close (testfs_fd);
 	close (linux_fd);
 #endif
@@ -432,6 +434,7 @@ int cmd_cp2fs (int argcnt, char *argvec[])
 		}
 		
 		} while (readcnt == BUFFERLEN);
+	printf("\n");
 	b_close (testfs_fd);
 	close (linux_fd);
 #endif
@@ -684,10 +687,6 @@ int main (int argc, char * argv[])
 	while (1)
 		{
 		cmdin = readline("Prompt > ");
-		//char * name = "/home";
-		// fs_isDir(name);
-		// fs_isFile(name);
-		//fs_delete("/home/student/test.txt");
 #ifdef COMMAND_DEBUG
 		printf ("%s\n", cmdin);
 #endif
