@@ -123,7 +123,6 @@ int validate_path(char * name)
             
             if (num_of_paths == 0) // if this was the head path
             {
-                printf("openning file...\n");
 
                 // this will be marked -2 to open this existing file
                 num_of_paths = -2; 
@@ -380,8 +379,11 @@ int fs_rmdir(const char *pathname)
     free(temp_dir);
     temp_dir = NULL;
 
-    free(temp_curr_dir);
-    temp_curr_dir = NULL;
+    if (temp_curr_dir != NULL)
+    {
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
 
     return ret;
 }
@@ -403,8 +405,13 @@ int fs_isDir(char * path)
         ret = 0; // convert ret from -1 to 0 to return 'false'
     }
 
-    free(temp_curr_dir);
-    temp_curr_dir = NULL;
+    if (temp_curr_dir != NULL)
+    {
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
+    
+
     
     return ret;
 }
@@ -584,16 +591,8 @@ fdDir * fs_opendir(const char * name)
 {
     
     int ret = 0;
-
-    name_check = malloc (4097);
-
-    if (name_check == NULL)
-    {
-        printf("ERROR: malloc failed.\n");
-        exit(-1);
-    }
     
-    if (strcmp(name, fs_getcwd(name_check, 4097)) != 0)
+    if (name != NULL)
     {
         ret = parse_pathname(name);
     }
@@ -689,10 +688,6 @@ int fs_closedir(fdDir *dirp)
         free(temp_curr_dir);
         temp_curr_dir = NULL;
     }
-        
-    memset(name_check, 0, sizeof(name_check));
-    free(name_check);
-    name_check = NULL;
     
     free(dirp);
     dirp = NULL;
