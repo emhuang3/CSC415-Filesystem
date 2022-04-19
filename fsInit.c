@@ -84,11 +84,11 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	
 	//checking if magic number is a match
-	if (VCB->magic_num != 5)
+	if (VCB->magic_num != 3)
 	{
 		flush_blocks(numberOfBlocks, blockSize);
 
-		VCB->magic_num = 5;
+		VCB->magic_num = 3;
 		VCB->total_blocks = numberOfBlocks;
 		VCB->block_size = blockSize;
 		
@@ -99,7 +99,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		create_dir(".", 700);
 
-		// -------------- temp placement
+		// -------------- TEMP PLACEMENT ----------- //
 
 		// setting current working directory to root
 		curr_dir = malloc(VCB->block_size * 6);
@@ -160,6 +160,13 @@ void exitFileSystem ()
 		free(buffer_bitmap);
 		buffer_bitmap = NULL;
 	}
+
+	if (saved_data != NULL)
+	{
+		free(saved_data);
+		saved_data = NULL;
+	}
+	
 	
 	printf ("System exiting\n");
 }

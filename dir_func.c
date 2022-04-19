@@ -11,6 +11,8 @@
 dir_entr * temp_dir;      // this is a temp dir for making/removing directories and getting cwd
 dir_entr * temp_curr_dir; // this will represent a temp pointer to current working directory.
 dir_entr * curr_dir;      // this will be kept in memory as a pointer to a current working directory
+dir_entr * saved_data;
+int temp_child_index;
 
 void create_dir(char * name, int permissions) 
 {
@@ -114,7 +116,7 @@ int validate_path(char * name)
     before updating current working directory with a valid path.
     */
 
-    for (int i = 2; i < 64; i++)
+    for (int i = 0; i < 64; i++)
     {
         //checking if this is a file
         if (strcmp(temp_curr_dir[i].filename, name) == 0 && temp_curr_dir[i].is_file)
@@ -153,6 +155,7 @@ int validate_path(char * name)
         {
 
             // updating temp with found path
+            temp_child_index = i;
             LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
             return 0;
         }
@@ -346,11 +349,11 @@ int fs_rmdir(const char *pathname)
             if (strcmp(temp_dir[i].filename, temp_curr_dir[0].filename) == 0)
             {
 
-                // clearing filename in parent will mark this entry as free to write to
-                memset(temp_dir[i].filename, 0, sizeof(temp_dir[i].filename));
-
                 // free up space in freespace bitmap
                 reallocate_space(temp_curr_dir, 0, 0);
+
+                // clearing filename in parent will mark this entry as free to write to
+                memset(temp_dir[i].filename, 0, sizeof(temp_dir[i].filename));
 
                 i = 64;
             }
@@ -417,85 +420,43 @@ int fs_isDir(char * path)
 }
 
 //return 1 if path is file, 0 otherwise
-int fs_isFile(char * path){
-    
-    
+int fs_isFile(char * path)
+{
+    int ret = 0;
+    parse_pathname(path);
+
+    // indicates head of path is a file
+    if (num_of_paths == -2)
+    {
+        return 1;
+    }
+
+    if (temp_curr_dir != NULL)
+    {
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
+
     return 0;
 }
 
-int fs_delete(char* filename)
+int fs_delete(char * pathname)
 {
-    // char* pathname = strcat(".\\", filename);
-    // int ret = parse_pathname(pathname);
+    parse_pathname(pathname);
 
-    // //checking that this directory is not root
-    // if (strcmp(temp_curr_dir[0].filename, ".") == 0)
-    // {
-    //     ret = -1;
-    //     printf("ERROR: cannot remove root directory.\n");
-    // }
+    int index = temp_curr_dir[0].temp_file_index;
 
-    // //checking if path is valid and if temp curr working dir is the file we want
-    // if (ret == 0)
-    // {
-    //     // check that the directory contains specified file
-    //     if (strcmp(temp_curr_dir[0].filename, filename) == 0)
-    //     {
-    //         //getting parent dir
-    //         temp_dir = malloc(VCB->block_size*6);
-            
-    //         // checking if malloc was successful
-    //         if (temp_dir == NULL)
-    //         {
-    //             printf("ERROR: failed to malloc.\n");
-    //             exit(-1);
-    //         }
+    reallocate_space(temp_curr_dir, index, 0);
 
-    //         LBAread(temp_dir, 6, temp_curr_dir[1].starting_block);
+    memset(temp_curr_dir[index].filename, 0, sizeof(temp_curr_dir[index].filename));
 
-    //         //looking for this directory in parent directory, then erasing it from parent directory
-    //         for (int i = 2; i < 64; i++)
-    //         {
-    //             if (strcmp(temp_dir[i].filename, temp_curr_dir[0].filename) == 0)
-    //             {
-    //                 printf("found file [%s] in parent [%s] at index %d.\n", 
-    //                 temp_curr_dir[0].filename, temp_dir[0].filename, i);
+    LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
 
-    //                 // clearing filename in parent will mark this entry as free to write to
-    //                 memset(temp_dir[i].filename, 0, sizeof(temp_dir[i].filename));
-
-    //                 // free up space in freespace bitmap
-    //                 reallocate_space(temp_curr_dir);
-
-    //                 i = 64;
-    //             }
-
-    //             else if (i == 63)
-    //             {
-    //                 ret = -1;
-    //                 printf("ERROR: cannot find child [%s] in parent [%s].\n", 
-    //                 temp_curr_dir[0].filename, temp_dir[0].filename);
-    //             }
-    //         }
-    //     }
-
-    //     // update parent directory to disk (i.e. temp_dir).
-    //     if (ret == 0)
-    //     {
-    //         LBAwrite(temp_dir, 6, temp_dir[0].starting_block);
-    //         printf("-- updated disk --\n\n");
-    //     }
-    //     else
-    //     {
-    //         printf("fatal error: -- did not update disk --\n\n");
-    //     }
-    // }
-
-    // free(temp_dir);
-    // temp_dir = NULL;
-
-    // free(temp_curr_dir);
-    // temp_curr_dir = NULL;
+    if (temp_curr_dir != NULL)
+    {
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
 
     return 0;
 }
@@ -573,6 +534,7 @@ int fs_setcwd(char * buf)
     if (ret == 0) 
     {
         LBAread(curr_dir, 6, temp_curr_dir[0].starting_block);
+        
     }
 
     if (temp_curr_dir != NULL)
@@ -586,7 +548,6 @@ int fs_setcwd(char * buf)
 
 //used in ls
 fdDir * dirp;
-char * name_check;
 fdDir * fs_opendir(const char * name)
 {
     
@@ -717,4 +678,150 @@ int fs_stat(const char *path, struct fs_stat *buf)
 	// time_t    st_createtime;   	/* time of last status change */
 
     return 0;
+}
+
+
+dir_entr * child_dir;
+int move_dir(char * src, char * dest)
+{
+    int ret = parse_pathname(src);
+
+    if (ret < 0)
+    {
+        printf("ERROR: src not a valid path.\n");
+        if (temp_curr_dir != NULL)
+        {
+            free(temp_curr_dir);
+            temp_curr_dir = NULL;
+        }
+
+        ret = -1;
+    }
+    // this will represent the parent of temp_curr_dir
+    temp_dir = malloc(VCB->block_size * 6);
+
+    // this will represent the child (A.K.A. temp_curr_dir of first parse)
+    child_dir = malloc(VCB->block_size * 6);
+
+    if (saved_data == NULL)
+    {
+        saved_data = malloc(sizeof(dir_entr));
+    }
+
+    if (temp_dir == NULL || saved_data == NULL || child_dir == NULL)
+    {
+        printf("failed to malloc.\n");
+        ret = -1;
+    }
+    
+    else if (strcmp(temp_curr_dir[0].filename, ".") == 0)
+    {
+        printf("ERROR: cannot move root.\n");
+        ret = -1;
+    }
+
+    else
+    {
+        //read parent into memory
+        LBAread(temp_dir, 6, temp_curr_dir[1].starting_block);
+
+        //read child into memory
+        LBAread(child_dir, 6, temp_curr_dir[0].starting_block);
+
+        int index = temp_child_index;
+
+        // saving child information to move to other directory
+        memset(saved_data->filename, 0, sizeof(saved_filename));
+        strcpy(saved_data->filename, temp_dir[index].filename);
+        saved_data->starting_block = temp_dir[index].starting_block;
+        saved_data->size = temp_dir[index].size;
+        saved_data->is_file = temp_dir[index].is_file;
+        saved_data->permissions = temp_dir[index].permissions;
+        saved_data->user_ID = temp_dir[index].user_ID;
+	    saved_data->group_ID = temp_dir[index].group_ID;
+
+        // clear child's name in parent to mark it free
+        memset(temp_dir[index].filename, 0, sizeof(temp_dir[index].filename));
+    }
+
+    if (temp_curr_dir != NULL)
+    {
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
+    
+    ret = parse_pathname(dest);
+
+    if (ret < 0)
+    {
+        printf("ERROR: dest not a valid path.\n");
+        ret = -1;
+    }
+    else
+    {
+        // find a free slot in the parent
+        for (int i = 0; i < 64; i++)
+        {
+
+            // free slot found. copy saved data over to new parent 
+            if (strcmp(temp_curr_dir[i].filename, "") == 0)
+            {
+                strcpy(temp_curr_dir[i].filename, saved_data->filename);
+                temp_curr_dir[i].starting_block = saved_data->starting_block;
+                temp_curr_dir[i].size = saved_data->size;
+                temp_curr_dir[i].is_file = saved_data->is_file;
+                temp_curr_dir[i].permissions = saved_data->permissions;
+                temp_curr_dir[i].user_ID = saved_data->user_ID;
+                temp_curr_dir[i].group_ID = saved_data->group_ID;
+                i = 64;
+            }
+            else if (i == 63)
+            {
+                // this will be changed when dynamic sizing is implimented
+                printf("ERROR: no more space left in this directory.\n");
+                ret = -1;
+            }
+        }
+    }
+
+    if (ret == 0)
+    {
+
+        // update parent info in child;
+        memset(child_dir[1].filename, 0, sizeof(child_dir[1].filename));
+        strcpy(child_dir[1].filename, temp_curr_dir[0].filename);
+        child_dir[1].size = temp_curr_dir[0].size;
+        child_dir[1].starting_block = temp_curr_dir[0].starting_block;
+
+        LBAwrite(child_dir, 6, child_dir[0].starting_block);
+
+        // updates dest parent directory
+        LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
+
+        // updates src parent directory
+        LBAwrite(temp_dir, 6, temp_dir[0].starting_block);
+    }
+    
+
+    if (temp_dir != NULL)
+    {
+        memset(temp_dir, 0, sizeof(temp_dir));
+        free(temp_dir);
+        temp_dir = NULL;
+    }
+
+    if (temp_curr_dir != NULL)
+    {
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
+
+    if (child_dir != NULL)
+    {
+        free(child_dir);
+        child_dir = NULL;
+    }
+    
+
+    return ret;
 }

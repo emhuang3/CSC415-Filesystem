@@ -184,7 +184,7 @@ void init_bitmap()
 void reallocate_space(dir_entr * directory, int index, int save_state)
 {
 	// get num of blocks this directory occupies
-	int count = convert_size_to_blocks(directory[index].size, VCB->block_size);
+	int block_count = convert_size_to_blocks(directory[index].size, VCB->block_size);
 	
 	// update bitmap buffer
 	if (buffer_bitmap == NULL)
@@ -201,7 +201,7 @@ void reallocate_space(dir_entr * directory, int index, int save_state)
 		LBAread(buffer_bitmap, 5, 1);
 	}
 
-	for (int i = directory[index].starting_block; i < directory[index].starting_block + count; i++)
+	for (int i = directory[index].starting_block; i < directory[index].starting_block + block_count; i++)
 	{
 		clear_bit(i);
 	}
