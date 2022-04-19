@@ -302,7 +302,7 @@ int cmd_mv (int argcnt, char *argvec[])
 			ret = move_dir(src, dest);
 			if (ret < 0)
 			{
-				printf("move directory failed.\n\n");
+				printf("did not move directory.\n\n");
 			}
 			else 
 			{

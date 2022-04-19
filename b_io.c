@@ -117,13 +117,13 @@ b_io_fd b_open (char * pathname, int flags)
 	int ret = parse_pathname(pathname);
 
 	// could not read path
-	if (num_of_paths == -1)
+	if (paths_remaining == -1)
 	{
 		return -1;
 	}
 
 	// implies that we may have a working file
-	if (ret == -1 && num_of_paths == 0) 
+	if (ret == -1 && paths_remaining == 0) 
 	{
 		// set fcbArray[returnFd].parent_dir to have a refererence its own parent.
 		LBAread(fcbArray[returnFd].parent_dir, 6, temp_curr_dir[0].starting_block);
@@ -169,7 +169,7 @@ b_io_fd b_open (char * pathname, int flags)
 	}
 
 	// This will open the existing file
-	else if (num_of_paths == -2)
+	else if (paths_remaining == -2)
 	{
 
 		// set fcbArray[returnFd].parent_dir to have a refererence its own parent.
@@ -272,7 +272,13 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			scanf("%2s", input);
 		}
 		
-		if (strcmp(input, "y") == 0 )
+		if (strcmp(input, "n") == 0 )
+		{
+			printf("did not copy file.\n\n");
+			return -1;
+		}
+
+		else
 		{
 			// ------ begin overwrite process ------ //
 
@@ -282,12 +288,6 @@ int b_write (b_io_fd fd, char * buffer, int count)
 
 			// free blocks that file occupies in freespace bitmap
 			reallocate_space(fcbArray[fd].parent_dir, fcbArray[fd].pos_in_parent, 1);
-		}
-
-		else
-		{
-			printf("did not copy file.\n\n");
-			return -1;
 		}
 	}
 

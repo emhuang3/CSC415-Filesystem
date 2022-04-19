@@ -81,7 +81,8 @@ void create_dir(char * name, int permissions)
 
 char saved_filename[20];
 int ret;
-int num_of_paths;
+int paths_remaining;
+int total_paths;
 
 /* 
 to be called in parse_path(). This function will update 
@@ -93,7 +94,7 @@ int validate_path(char * name)
     // return -1 if it exits, and 0 if it does not.
 
     // this represents the paths remaining to be searched
-    num_of_paths--;
+    paths_remaining--;
     
     // init temp current working directory if NULL
     if (temp_curr_dir == NULL)
@@ -111,23 +112,39 @@ int validate_path(char * name)
         LBAread(temp_curr_dir, 6, curr_dir[0].starting_block);
     }
 
+    // check if user is trying to refer to current direectory
+    if (total_paths == 1 && strcmp(temp_curr_dir[0].filename, name) == 0)
+    {
+        temp_child_index = 0;
+        
+        // save name in case user is trying to make child of same name
+        memset(saved_filename,0, sizeof(saved_filename));
+        strcpy(saved_filename, name);
+
+        /* return 1 indicates that we can either make this as directory 
+        or refer to curr dir for moving files */
+
+        return 1; 
+    }
+    
     /*
     iterate through dir_entries of temp directory to see if path is valid, 
     before updating current working directory with a valid path.
     */
 
-    for (int i = 0; i < 64; i++)
-    {
+    for (int i = 2; i < 64; i++)
+    {   
+
         //checking if this is a file
         if (strcmp(temp_curr_dir[i].filename, name) == 0 && temp_curr_dir[i].is_file)
         {
             
             
-            if (num_of_paths == 0) // if this was the head path
+            if (paths_remaining == 0) // if this was the head path
             {
 
                 // this will be marked -2 to open this existing file
-                num_of_paths = -2; 
+                paths_remaining = -2; 
 
                 // stores a reference to this file
                 temp_curr_dir[0].temp_file_index = i; 
@@ -136,13 +153,13 @@ int validate_path(char * name)
             else
             {
                 printf("ERROR: cannot set file as current directory.\n");
-                num_of_paths = -1; // cannot make directory
+                paths_remaining = -1; // cannot make directory
                 return -1;
             }
         }
 
         // this path was found while more paths still need to be searched
-        else if (strcmp(temp_curr_dir[i].filename, name) == 0 && num_of_paths > 0)
+        else if (strcmp(temp_curr_dir[i].filename, name) == 0 && paths_remaining > 0)
         {
             
             // updating temp with found path
@@ -151,13 +168,14 @@ int validate_path(char * name)
         }
 
         // last path was found
-        else if (strcmp(temp_curr_dir[i].filename, name) == 0 && num_of_paths == 0)
+        else if (strcmp(temp_curr_dir[i].filename, name) == 0 && paths_remaining == 0)
         {
-
+        
             // updating temp with found path
             temp_child_index = i;
             LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
             return 0;
+        
         }
 
         /*
@@ -166,13 +184,13 @@ int validate_path(char * name)
         */
 
         // this else-if container implies that path was not found while there are still paths left to search
-        else if (i == 63 && num_of_paths > 0)
+        else if (i == 63 && paths_remaining > 0)
         {
             return -1;
         }
 
         // last path does not exist. This implies that we can make a new directory
-        else if (i == 63 && num_of_paths == 0)
+        else if (i == 63 && paths_remaining == 0)
         {
 
             // save name
@@ -187,7 +205,8 @@ int parse_pathname(const char * pathname)
 {
     char * count_slashes = strdup(pathname);
     char * buffer_pathname = strdup(pathname);
-    num_of_paths = 0;
+    paths_remaining = 0;
+    total_paths = 0;
 
     //just in case there is a newline character, this will remove \n
     char * newLine = strchr(buffer_pathname, '\n');
@@ -200,7 +219,7 @@ int parse_pathname(const char * pathname)
     if (count_slashes[0] != '/')
     {
         printf("ERROR: path must begin with '/'\n");
-        num_of_paths = -1;
+        paths_remaining = -1;
         return -1;
     }
     
@@ -210,29 +229,30 @@ int parse_pathname(const char * pathname)
         if (count_slashes[i] == '/' && i == strlen(count_slashes) - 1)
         {
             printf("ERROR: empty head path after '/'\n");
-            num_of_paths = -1;
+            paths_remaining = -1;
             return -1;
         }
 
         else if (count_slashes[i] == '/' && count_slashes[i + 1] == '/')
         {
             printf("ERROR: invalid double '/'\n");
-            num_of_paths = -1;
+            paths_remaining = -1;
             return -1;
         }
 
         else if (count_slashes[i] == '/')
         {
-            num_of_paths++;
+            paths_remaining++;
         }
     }
+
+    total_paths = paths_remaining;
 
     // calling str_tok to divide pathname into tokens
     char * name = strtok(buffer_pathname, "/");
     
     while (name != NULL)
     {
-
         // validating that each path is valid
         ret = validate_path(name);
         if (ret == -1) 
@@ -256,7 +276,12 @@ int fs_mkdir(const char * pathname, mode_t mode)
      which means we can make this directory
     */
 
-    if (ret == -1 && num_of_paths == 0)
+    if (strcmp(saved_filename, ".") == 0 || strcmp(saved_filename, "..") == 0)
+    {
+       printf("cannot name directory %s\n", saved_filename);
+    }
+
+    else if (ret != 0 && paths_remaining == 0)
     {
 
         //searching for a free directory entry to write to in temp current directory
@@ -286,7 +311,7 @@ int fs_mkdir(const char * pathname, mode_t mode)
             }
         }
     }
-    else if (ret == 0 && num_of_paths == 0)
+    else if (ret == 0 && paths_remaining == 0)
     {
         printf("path already exists.\n");
     }
@@ -426,7 +451,7 @@ int fs_isFile(char * path)
     parse_pathname(path);
 
     // indicates head of path is a file
-    if (num_of_paths == -2)
+    if (paths_remaining == -2)
     {
         return 1;
     }
@@ -682,6 +707,41 @@ int fs_stat(const char *path, struct fs_stat *buf)
 
 
 dir_entr * child_dir;
+
+// uses recursion to delete an entire branch of directories/files
+int delete_this_branch(dir_entr * directory)
+{
+
+}
+
+int overwrite_dir()
+{
+    int ret;
+    char input[2];
+    printf("directory already exists.\n");
+    printf("replace existing directory? y or n\n");
+    
+    while (strcmp(input, "y") != 0 && strcmp(input, "n") != 0)
+	{
+		scanf("%2s", input);
+	}
+
+    if (strcmp(input, "n") == 0 )
+    {
+        // did not move directory.
+        return -1;
+    }
+
+    else
+    {
+        // ------ begin delete process ------ //
+        
+        ret = delete_this_branch(temp_curr_dir);
+    }
+    return ret;
+}
+
+
 int move_dir(char * src, char * dest)
 {
     int ret = parse_pathname(src);
@@ -752,39 +812,52 @@ int move_dir(char * src, char * dest)
     
     ret = parse_pathname(dest);
 
-    if (ret < 0)
+    if (ret == -1)
     {
         printf("ERROR: dest not a valid path.\n");
-        ret = -1;
     }
     else
     {
-        // find a free slot in the parent
+        // check if dir already exists in dest directory
         for (int i = 0; i < 64; i++)
         {
-
-            // free slot found. copy saved data over to new parent 
-            if (strcmp(temp_curr_dir[i].filename, "") == 0)
+            if (strcmp(child_dir[0].filename, temp_curr_dir[i].filename) == 0)
             {
-                strcpy(temp_curr_dir[i].filename, saved_data->filename);
-                temp_curr_dir[i].starting_block = saved_data->starting_block;
-                temp_curr_dir[i].size = saved_data->size;
-                temp_curr_dir[i].is_file = saved_data->is_file;
-                temp_curr_dir[i].permissions = saved_data->permissions;
-                temp_curr_dir[i].user_ID = saved_data->user_ID;
-                temp_curr_dir[i].group_ID = saved_data->group_ID;
-                i = 64;
-            }
-            else if (i == 63)
-            {
-                // this will be changed when dynamic sizing is implimented
-                printf("ERROR: no more space left in this directory.\n");
-                ret = -1;
+                ret = overwrite_dir();
             }
         }
+        
+        if (ret > -1 )
+        {
+                // find a free slot in the parent
+            for (int i = 0; i < 64; i++)
+            {
+
+                // free slot found. copy saved data over to new parent 
+                if (strcmp(temp_curr_dir[i].filename, "") == 0)
+                {
+                    strcpy(temp_curr_dir[i].filename, saved_data->filename);
+                    temp_curr_dir[i].starting_block = saved_data->starting_block;
+                    temp_curr_dir[i].size = saved_data->size;
+                    temp_curr_dir[i].is_file = saved_data->is_file;
+                    temp_curr_dir[i].permissions = saved_data->permissions;
+                    temp_curr_dir[i].user_ID = saved_data->user_ID;
+                    temp_curr_dir[i].group_ID = saved_data->group_ID;
+                    i = 64;
+                }
+                else if (i == 63)
+                {
+                    // this will be changed when dynamic sizing is implimented
+                    printf("ERROR: no more space left in this directory.\n");
+                    ret = -1;
+                }
+            }
+        }
+        
+
     }
 
-    if (ret == 0)
+    if (ret > -1)
     {
 
         // update parent info in child;
