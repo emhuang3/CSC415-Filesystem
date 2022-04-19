@@ -181,10 +181,10 @@ void init_bitmap()
 	update_free_block_start();
 }
 
-void reallocate_space(dir_entr * directory)
+void reallocate_space(dir_entr * directory, int index, int save_state)
 {
 	// get num of blocks this directory occupies
-	int count = ceil(directory[0].size/512);
+	int count = convert_size_to_blocks(directory[index].size, VCB->block_size);
 	
 	// update bitmap buffer
 	if (buffer_bitmap == NULL)
@@ -201,21 +201,21 @@ void reallocate_space(dir_entr * directory)
 		LBAread(buffer_bitmap, 5, 1);
 	}
 
-	
-	
-
-	printf("Blocks freed: ");
-	for (int i = directory[0].starting_block; i < directory[0].starting_block + count; i++)
+	for (int i = directory[index].starting_block; i < directory[index].starting_block + count; i++)
 	{
 		clear_bit(i);
-		printf("%d ", i);
 	}
-	printf("\n");
 
-	LBAwrite(buffer_bitmap, 5, 1);
+	// prevents updating disk during volatile writing process
+	if (!save_state)
+	{
+		LBAwrite(buffer_bitmap, 5, 1);
 
-	// updating free block start in VCB
-	update_free_block_start();
+		// updating free block start in VCB
+		update_free_block_start();
+	}
+	
+
 
 	/*
 	 metadata in index 0 & 1 does not need to be updated 

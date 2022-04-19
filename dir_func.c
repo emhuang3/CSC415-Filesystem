@@ -350,7 +350,7 @@ int fs_rmdir(const char *pathname)
                 memset(temp_dir[i].filename, 0, sizeof(temp_dir[i].filename));
 
                 // free up space in freespace bitmap
-                reallocate_space(temp_curr_dir);
+                reallocate_space(temp_curr_dir, 0, 0);
 
                 i = 64;
             }

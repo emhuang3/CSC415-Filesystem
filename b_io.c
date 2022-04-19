@@ -261,7 +261,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	// implies that user might want to overwrite this file
 	if (overwrite == 1)
 	{
-		overwrite = 0;
+		overwrite = 2;
 		char input[2];
 		printf("file already exists.\n");
 		printf("would you like to overwrite this file? y or n\n");
@@ -274,11 +274,14 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		
 		if (strcmp(input, "y") == 0 )
 		{
-			// begin overwrite process
+			// ------ begin overwrite process ------ //
 
-			// clear/reset fileinfo in fcbArray[fd]
+			// clear/reset buffer info in fcbArray[fd]
+			fcbArray[fd].len = 0;
+			fcbArray[fd].pos = 0;
 
 			// free blocks that file occupies in freespace bitmap
+			reallocate_space(fcbArray[fd].parent_dir, fcbArray[fd].pos_in_parent, 1);
 		}
 
 		else
@@ -323,17 +326,23 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		if (count < 200)
 		{
 			// update temp_curr_directory with child's filesize
-			int i = fcbArray[fd].pos_in_parent;
-			fcbArray[fd].parent_dir[i].size = fcbArray[fd].len;
+			int index = fcbArray[fd].pos_in_parent;
+			fcbArray[fd].parent_dir[index].size = fcbArray[fd].len;
 
 			// write entire file to disk
 			int block_count = convert_size_to_blocks(fcbArray[fd].len, VCB->block_size);
 
-			// printf("blocks_to_allocate: %d\n", block_count);
+			// update realloc to disk if overwrite == 2
+			if (overwrite == 2)
+			{
+				LBAwrite(buffer_bitmap, 5, 1);
+				update_free_block_start();
+				overwrite = 0;
+			}
 
-			fcbArray[fd].parent_dir[i].starting_block = allocate_space(block_count);
+			fcbArray[fd].parent_dir[index].starting_block = allocate_space(block_count);
 
-			LBAwrite(fcbArray[fd].buf, block_count, fcbArray[fd].parent_dir[i].starting_block);
+			LBAwrite(fcbArray[fd].buf, block_count, fcbArray[fd].parent_dir[index].starting_block);
 			
 
 			// update parent directory
