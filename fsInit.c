@@ -93,13 +93,13 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		VCB->block_size = blockSize;
 		
 		init_bitmap(); 
-		update_free_block_start(blockSize);
+		update_free_block_start();
 
 		// --------- INIT ROOT DIRECTORY ---------- //
 
 		create_dir(".", 700);
 
-		// temp placement
+		// -------------- temp placement
 
 		// setting current working directory to root
 		curr_dir = malloc(VCB->block_size * 6);
