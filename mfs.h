@@ -60,7 +60,7 @@ typedef struct
 // Key directory functions
 int fs_mkdir(const char *pathname, mode_t mode);
 int fs_rmdir(const char *pathname);
-int move_dir(char * src, char * dest);
+int move(char * src, char * dest);
 
 // Directory iteration functions
 fdDir * fs_opendir(const char *name);

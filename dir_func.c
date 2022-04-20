@@ -109,19 +109,26 @@ int validate_path(char * name)
 		    exit(-1);
 	    }
 
-        // initializing temp from the current working directory
-        LBAread(temp_curr_dir, 6, curr_dir[0].starting_block);
+        // this indicates user is passing in an absolute path
+        if (strcmp(name, ".") == 0)
+        {
+            LBAread(temp_curr_dir, 6, VCB->root_start);
+            return VALID;
+        }
+
+        else
+        {
+            // initializing temp from the current working directory
+            LBAread(temp_curr_dir, 6, curr_dir[0].starting_block);
+        }
     }
 
-    if (strcmp(name, ".") == 0)
-    {
-        LBAread(temp_curr_dir, 6, VCB->root_start);
-    }
-    
+
 
     // check if user is trying to refer to current directory
     if (total_paths == 1 && strcmp(temp_curr_dir[0].filename, name) == 0)
     {
+        printf("check\n");
         temp_child_index = 0;
         
         // save name in case user is trying to make child of same name
@@ -437,6 +444,10 @@ int fs_isDir(char * path)
             ret = 1; // returns true to shell
         }
     }
+    else
+    {
+        ret = 0;
+    }
 
     if (temp_curr_dir != NULL)
     {
@@ -458,6 +469,10 @@ int fs_isFile(char * path)
     {
         ret = 1;
     }
+    else
+    {
+        ret = 0;
+    }
 
     if (temp_curr_dir != NULL)
     {
@@ -472,7 +487,7 @@ int fs_delete(char * pathname)
 {
     parse_pathname(pathname);
 
-    int index = temp_curr_dir[0].temp_file_index;
+    int index = temp_child_index;
 
     reallocate_space(temp_curr_dir, index, 0);
 
@@ -820,7 +835,7 @@ int overwrite_dir(int index)
 }
 
 
-int move_dir(char * src, char * dest)
+int move(char * src, char * dest)
 {
     if (strcmp(src, dest) == 0)
     {
@@ -873,6 +888,7 @@ int move_dir(char * src, char * dest)
         }
         else
         {
+            printf("check.\n");
             //read parent into memory
             LBAread(temp_dir, 6, temp_curr_dir[1].starting_block);
 
@@ -891,8 +907,6 @@ int move_dir(char * src, char * dest)
 	    saved_data.group_ID = temp_dir[temp_child_index].group_ID;
 
         // clear child's name in parent to mark it free
-        // memset(saved_filename, 0, sizeof(saved_filename));
-        // strcpy(saved_filename, temp_dir[child_index].filename);
         memset(temp_dir[temp_child_index].filename, 0, sizeof(temp_dir[temp_child_index].filename));
     }
 
@@ -959,9 +973,10 @@ int move_dir(char * src, char * dest)
 
     if (ret == VALID || ret == SELF)
     {
+        
 
         // update parent info in child;
-        if (!saved_data.is_file)
+        if (saved_data.is_file == 1)
         {
             memset(child_dir[1].filename, 0, sizeof(child_dir[1].filename));
             strcpy(child_dir[1].filename, temp_curr_dir[0].filename);
@@ -1001,10 +1016,4 @@ int move_dir(char * src, char * dest)
     }
     
     return ret;
-}
-
-// this just moves a file
-int move_file(char * src, char * dest)
-{
-    
 }
