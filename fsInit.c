@@ -165,13 +165,6 @@ void exitFileSystem ()
 		free(buffer_bitmap);
 		buffer_bitmap = NULL;
 	}
-
-	if (saved_data != NULL)
-	{
-		free(saved_data);
-		saved_data = NULL;
-	}
-	
 	
 	printf ("System exiting\n");
 }

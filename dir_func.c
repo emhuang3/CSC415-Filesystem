@@ -11,7 +11,7 @@
 dir_entr * temp_dir;      // this is a temp dir for making/removing directories and getting cwd
 dir_entr * temp_curr_dir; // this will represent a temp pointer to current working directory.
 dir_entr * curr_dir;      // this will be kept in memory as a pointer to a current working directory
-dir_entr * saved_data;
+dir_entr saved_data;
 int temp_child_index;
 
 enum {VALID, INVALID, SELF, FOUND_FILE};
@@ -93,7 +93,6 @@ temp current working directory to check if a valide path was given
 
 int validate_path(char * name) 
 {
-    // return -1 if it exits, and 0 if it does not.
 
     // this represents the paths remaining to be searched
     paths_remaining--;
@@ -123,7 +122,7 @@ int validate_path(char * name)
         memset(saved_filename,0, sizeof(saved_filename));
         strcpy(saved_filename, name);
 
-        /* return 1 indicates that we can either make this as directory 
+        /* return SELF indicates that we can either make this as directory 
         or refer to curr dir for moving files */
 
         return SELF; 
@@ -284,7 +283,7 @@ int fs_mkdir(const char * pathname, mode_t mode)
        printf("cannot name directory %s\n", saved_filename);
     }
 
-    else if (ret == INVALID | SELF && paths_remaining == 0)
+    else if (ret == INVALID && paths_remaining == 0 || ret == SELF && paths_remaining == 0)
     {
 
         //searching for a free directory entry to write to in temp current directory
@@ -707,7 +706,7 @@ int fs_stat(const char *path, struct fs_stat *buf)
 dir_entr * child_dir;
 
 // uses recursion to free/delete an entire branch of directories/files from freespace bitmap
-int delete_this_branch(dir_entr * directory, int index)
+void delete_this_branch(dir_entr * directory, int index)
 {
 
     int block_count = convert_size_to_blocks(directory[index].size, VCB->block_size);
@@ -762,9 +761,6 @@ int delete_this_branch(dir_entr * directory, int index)
                 free(branch);
                 branch = NULL;
             }
-            
-
-            return 0;
         }
     }
 }
@@ -792,17 +788,31 @@ int overwrite_dir(int index)
     {
         // ------ begin delete process ------ //
         
-        ret = delete_this_branch(temp_curr_dir, index);
+        delete_this_branch(temp_curr_dir, index);
+        return 0;
     }
-    return ret;
 }
 
 
 int move_dir(char * src, char * dest)
 {
+    if (strcmp(src, dest) == 0)
+    {
+        printf("ERROR: cannot move file/directory into itself.\n");
+        return -1;
+    }
+
+    if (strcmp(src, "/.") == 0)
+    {
+        printf("ERROR: cannot move root.\n");
+        return -1;
+    }
+    
+
     int ret = parse_pathname(src);
 
-    if (ret == INVALID)
+    // src to be moved cannot be current directory, so we will exit.
+    if (ret == INVALID || ret == SELF)
     {
         printf("ERROR: src not a valid path.\n");
         if (temp_curr_dir != NULL)
@@ -811,28 +821,22 @@ int move_dir(char * src, char * dest)
             temp_curr_dir = NULL;
         }
 
-        ret = -1;
+        return -1;
     }
     // this will represent the parent of temp_curr_dir
     temp_dir = malloc(VCB->block_size * 6);
 
-    // this will represent the child (A.K.A. temp_curr_dir of first parse)
+    // this will represent the child (temp_curr_dir of first parse)
     child_dir = malloc(VCB->block_size * 6);
 
-    if (saved_data == NULL)
-    {
-        saved_data = malloc(sizeof(dir_entr));
-    }
+    // if (saved_data == NULL)
+    // {
+    //     saved_data = malloc(sizeof(dir_entr));
+    // }
 
-    if (temp_dir == NULL || saved_data == NULL || child_dir == NULL)
+    if (temp_dir == NULL || child_dir == NULL)
     {
         printf("failed to malloc.\n");
-        ret = -1;
-    }
-    
-    else if (strcmp(temp_curr_dir[0].filename, ".") == 0)
-    {
-        printf("ERROR: cannot move root.\n");
         ret = -1;
     }
 
@@ -847,16 +851,18 @@ int move_dir(char * src, char * dest)
         int index = temp_child_index;
 
         // saving child information to move to other directory
-        memset(saved_data->filename, 0, sizeof(saved_data->filename));
-        strcpy(saved_data->filename, temp_dir[index].filename);
-        saved_data->starting_block = temp_dir[index].starting_block;
-        saved_data->size = temp_dir[index].size;
-        saved_data->is_file = temp_dir[index].is_file;
-        saved_data->permissions = temp_dir[index].permissions;
-        saved_data->user_ID = temp_dir[index].user_ID;
-	    saved_data->group_ID = temp_dir[index].group_ID;
+        memset(saved_data.filename, 0, sizeof(saved_data.filename));
+        strcpy(saved_data.filename, temp_dir[index].filename);
+        saved_data.starting_block = temp_dir[index].starting_block;
+        saved_data.size = temp_dir[index].size;
+        saved_data.is_file = temp_dir[index].is_file;
+        saved_data.permissions = temp_dir[index].permissions;
+        saved_data.user_ID = temp_dir[index].user_ID;
+	    saved_data.group_ID = temp_dir[index].group_ID;
 
         // clear child's name in parent to mark it free
+        // memset(saved_filename, 0, sizeof(saved_filename));
+        // strcpy(saved_filename, temp_dir[child_index].filename);
         memset(temp_dir[index].filename, 0, sizeof(temp_dir[index].filename));
     }
 
@@ -879,26 +885,27 @@ int move_dir(char * src, char * dest)
         {
             if (strcmp(child_dir[0].filename, temp_curr_dir[i].filename) == 0)
             {
+                // call overwrite dir function here
                 ret = overwrite_dir(i);
             }
         }
         
-        if (ret == VALID | SELF )
+        if (ret == VALID || ret == SELF)
         {
-                // find a free slot in the parent
-            for (int i = 0; i < 64; i++)
+            // find a free slot in the parent
+            for (int i = 2; i < 64; i++)
             {
 
                 // free slot found. copy saved data over to new parent 
                 if (strcmp(temp_curr_dir[i].filename, "") == 0)
                 {
-                    strcpy(temp_curr_dir[i].filename, saved_data->filename);
-                    temp_curr_dir[i].starting_block = saved_data->starting_block;
-                    temp_curr_dir[i].size = saved_data->size;
-                    temp_curr_dir[i].is_file = saved_data->is_file;
-                    temp_curr_dir[i].permissions = saved_data->permissions;
-                    temp_curr_dir[i].user_ID = saved_data->user_ID;
-                    temp_curr_dir[i].group_ID = saved_data->group_ID;
+                    strcpy(temp_curr_dir[i].filename, saved_data.filename);
+                    temp_curr_dir[i].starting_block = saved_data.starting_block;
+                    temp_curr_dir[i].size = saved_data.size;
+                    temp_curr_dir[i].is_file = saved_data.is_file;
+                    temp_curr_dir[i].permissions = saved_data.permissions;
+                    temp_curr_dir[i].user_ID = saved_data.user_ID;
+                    temp_curr_dir[i].group_ID = saved_data.group_ID;
                     i = 64;
                 }
                 else if (i == 63)
@@ -909,11 +916,10 @@ int move_dir(char * src, char * dest)
                 }
             }
         }
-        
 
     }
 
-    if (ret == VALID | SELF)
+    if (ret == VALID || ret == SELF)
     {
 
         // update parent info in child;
