@@ -13,6 +13,10 @@
 dir_entr * temp_dir;      // this is a temp dir for making/removing directories and getting cwd
 dir_entr * temp_curr_dir; // this will represent a temp pointer to current working directory.
 dir_entr * curr_dir;      // this will be kept in memory as a pointer to a current working directory
+dir_entr saved_data;
+int temp_child_index;
+
+enum {VALID, INVALID, SELF, FOUND_FILE};
 
 void create_dir(char * name, int permissions) 
 {
@@ -82,7 +86,8 @@ void create_dir(char * name, int permissions)
 
 char saved_filename[20];
 int ret;
-int num_of_paths;
+int paths_remaining;
+int total_paths;
 
 /* 
 to be called in parse_path(). This function will update 
@@ -91,10 +96,9 @@ temp current working directory to check if a valide path was given
 
 int validate_path(char * name) 
 {
-    // return -1 if it exits, and 0 if it does not.
 
     // this represents the paths remaining to be searched
-    num_of_paths--;
+    paths_remaining--;
     
     // init temp current working directory if NULL
     if (temp_curr_dir == NULL)
@@ -112,52 +116,71 @@ int validate_path(char * name)
         LBAread(temp_curr_dir, 6, curr_dir[0].starting_block);
     }
 
+    // check if user is trying to refer to current directory
+    if (total_paths == 1 && strcmp(temp_curr_dir[0].filename, name) == 0)
+    {
+        temp_child_index = 0;
+        
+        // save name in case user is trying to make child of same name
+        memset(saved_filename,0, sizeof(saved_filename));
+        strcpy(saved_filename, name);
+
+        /* return SELF indicates that we can either make this as directory 
+        or refer to curr dir for moving files */
+
+        return SELF; 
+    }
+    
     /*
     iterate through dir_entries of temp directory to see if path is valid, 
     before updating current working directory with a valid path.
     */
 
     for (int i = 2; i < 64; i++)
-    {
+    {   
+
         //checking if this is a file
         if (strcmp(temp_curr_dir[i].filename, name) == 0 && temp_curr_dir[i].is_file)
         {
             
             
-            if (num_of_paths == 0) // if this was the head path
+            if (paths_remaining == 0) // if this was the head path
             {
 
-                // this will be marked -2 to open this existing file
-                num_of_paths = -2; 
+                // this will be marked -2 to indicate that file was found at head path
+                // paths_remaining = -2; 
 
                 // stores a reference to this filef
                 temp_curr_dir[0].temp_file_index = i; 
-                return -1;
+                temp_child_index = i;
+                return FOUND_FILE;
             }
             else
             {
                 printf("ERROR: cannot set file as current directory.\n");
-                num_of_paths = -1; // cannot make directory
-                return -1;
+                paths_remaining = -1; // cannot make directory
+                return INVALID;
             }
         }
 
         // this path was found while more paths still need to be searched
-        else if (strcmp(temp_curr_dir[i].filename, name) == 0 && num_of_paths > 0)
+        else if (strcmp(temp_curr_dir[i].filename, name) == 0 && paths_remaining > 0)
         {
             
             // updating temp with found path
             LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
-            return 0;
+            return VALID;
         }
 
         // last path was found
-        else if (strcmp(temp_curr_dir[i].filename, name) == 0 && num_of_paths == 0)
+        else if (strcmp(temp_curr_dir[i].filename, name) == 0 && paths_remaining == 0)
         {
-
+        
             // updating temp with found path
+            temp_child_index = i;
             LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
-            return 0;
+            return VALID;
+        
         }
 
         /*
@@ -166,19 +189,19 @@ int validate_path(char * name)
         */
 
         // this else-if container implies that path was not found while there are still paths left to search
-        else if (i == 63 && num_of_paths > 0)
+        else if (i == 63 && paths_remaining > 0)
         {
-            return -1;
+            return INVALID;
         }
 
         // last path does not exist. This implies that we can make a new directory
-        else if (i == 63 && num_of_paths == 0)
+        else if (i == 63 && paths_remaining == 0)
         {
 
             // save name
             memset(saved_filename,0, sizeof(saved_filename));
             strcpy(saved_filename, name);
-            return -1;
+            return INVALID;
         }
     }
 }
@@ -187,7 +210,8 @@ int parse_pathname(const char * pathname)
 {
     char * count_slashes = strdup(pathname);
     char * buffer_pathname = strdup(pathname);
-    num_of_paths = 0;
+    paths_remaining = 0;
+    total_paths = 0;
 
     //just in case there is a newline character, this will remove \n
     char * newLine = strchr(buffer_pathname, '\n');
@@ -200,8 +224,8 @@ int parse_pathname(const char * pathname)
     if (count_slashes[0] != '/')
     {
         printf("ERROR: path must begin with '/'\n");
-        num_of_paths = -1;
-        return -1;
+        // paths_remaining = -1;
+        return INVALID;
     }
     
     // counting forward slashes to determine num of input
@@ -210,32 +234,33 @@ int parse_pathname(const char * pathname)
         if (count_slashes[i] == '/' && i == strlen(count_slashes) - 1)
         {
             printf("ERROR: empty head path after '/'\n");
-            num_of_paths = -1;
-            return -1;
+            // paths_remaining = -1;
+            return INVALID;
         }
 
         else if (count_slashes[i] == '/' && count_slashes[i + 1] == '/')
         {
             printf("ERROR: invalid double '/'\n");
-            num_of_paths = -1;
-            return -1;
+            // paths_remaining = -1;
+            return INVALID;
         }
 
         else if (count_slashes[i] == '/')
         {
-            num_of_paths++;
+            paths_remaining++;
         }
     }
+
+    total_paths = paths_remaining;
 
     // calling str_tok to divide pathname into tokens
     char * name = strtok(buffer_pathname, "/");
     //printf("Buffer path name: %s\n", buffer_pathname);
     while (name != NULL)
     {
-
         // validating that each path is valid
         ret = validate_path(name);
-        if (ret == -1) 
+        if (ret == INVALID) 
         {
             return ret;
         }
@@ -255,7 +280,12 @@ int fs_mkdir(const char * pathname, mode_t mode)
      which means we can make this directory
     */
 
-    if (ret == -1 && num_of_paths == 0)
+    if (strcmp(saved_filename, ".") == 0 || strcmp(saved_filename, "..") == 0)
+    {
+       printf("cannot name directory %s\n", saved_filename);
+    }
+
+    else if (ret == INVALID && paths_remaining == 0 || ret == SELF && paths_remaining == 0)
     {
 
         //searching for a free directory entry to write to in temp current directory
@@ -275,7 +305,7 @@ int fs_mkdir(const char * pathname, mode_t mode)
 
                 // update current directory on disk
                 LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
-                ret = 0;
+                ret = 0; // returns 0 to shell
                 i = 64;
             }
             else if (i == 63)
@@ -286,7 +316,7 @@ int fs_mkdir(const char * pathname, mode_t mode)
             }
         }
     }
-    else if (ret == 0 && num_of_paths == 0)
+    else if (ret == VALID && paths_remaining == 0)
     {
         printf("path already exists.\n");
     }
@@ -306,7 +336,7 @@ int fs_mkdir(const char * pathname, mode_t mode)
     return ret;
 }
 
-int fs_rmdir(const char *pathname) 
+int fs_rmdir(const char * pathname) 
 {
     temp_dir = malloc(VCB->block_size*6);
                 
@@ -322,7 +352,7 @@ int fs_rmdir(const char *pathname)
     //checking that this directory is not root
     if (strcmp(temp_curr_dir[0].filename, ".") == 0)
     {
-        ret = -1;
+        ret = INVALID; 
         printf("ERROR: cannot remove root directory.\n");
     }
 
@@ -331,14 +361,14 @@ int fs_rmdir(const char *pathname)
     {
         if (strcmp(temp_curr_dir[i].filename, "") != 0)
         {
-            ret = -1;
+            ret = INVALID;
             printf("ERROR: directory is not empty.\n");
             i = 64;
         }
     }
 
     // if directory is empty and not root
-    if (ret == 0)
+    if (ret == VALID)
     {   
         // getting the parent dir from child
         LBAread(temp_dir, 6, temp_curr_dir[1].starting_block);
@@ -349,11 +379,11 @@ int fs_rmdir(const char *pathname)
             if (strcmp(temp_dir[i].filename, temp_curr_dir[0].filename) == 0)
             {
 
+                // free up space in freespace bitmap
+                reallocate_space(temp_curr_dir, 0, 0);
+
                 // clearing filename in parent will mark this entry as free to write to
                 memset(temp_dir[i].filename, 0, sizeof(temp_dir[i].filename));
-
-                // free up space in freespace bitmap
-                reallocate_space(temp_curr_dir);
 
                 i = 64;
             }
@@ -361,13 +391,13 @@ int fs_rmdir(const char *pathname)
             // cannot find this entry in parent
             else if (i == 63)
             {
-                ret = -1;
+                ret = -1; //returns -1 to shell
             }
         }
     }
 
         // update parent directory to disk (i.e. temp_dir).
-        if (ret == 0)
+        if (ret == VALID)
         {
             LBAwrite(temp_dir, 6, temp_dir[0].starting_block);
             printf("-- updated disk --\n\n");
@@ -394,18 +424,17 @@ int fs_rmdir(const char *pathname)
 //return 1 if head path is directory is true and 0 if false
 int fs_isDir(char * path)
 {
-    int ret = parse_pathname(path); 
+    int ret = 0;
+    ret = parse_pathname(path); 
 
-    if(ret == 0)
+    if(ret == VALID)
     {
         if (temp_curr_dir[0].is_file == 0)
         {
-            ret = 1;
+            ret = 1; // returns true to shell
         }
-    }
-    else
-    {
-        ret = 0; // convert ret from -1 to 0 to return 'false'
+    }else{
+        ret = 0;
     }
 
     if (temp_curr_dir != NULL)
@@ -414,25 +443,51 @@ int fs_isDir(char * path)
         temp_curr_dir = NULL;
     }
     
-
-    
     return ret;
 }
 
 //return 1 if path is file, 0 otherwise
-int fs_isFile(char * path){
-    int ret = fs_isDir(path);
-    if(ret == 1){
-        ret = 0;
-    }
-    else{
+int fs_isFile(char * path)
+{
+    int ret = 0;
+    ret = parse_pathname(path);
+
+    // indicates head of path is a file
+    if (ret == FOUND_FILE)
+    {
         ret = 1;
     }
-    //printf("is file : %d\n", ret);
+    else{
+        ret = 0;
+    }
+
+    if (temp_curr_dir != NULL)
+    {
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
+
     return ret;
 }
 
+int fs_delete(char * pathname)
+{
+    parse_pathname(pathname);
 
+    int index = temp_curr_dir[0].temp_file_index;
+
+    reallocate_space(temp_curr_dir, index, 0);
+
+    memset(temp_curr_dir[index].filename, 0, sizeof(temp_curr_dir[index].filename));
+
+    LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
+
+    if (temp_curr_dir != NULL)
+    {
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
+}
 
 char * fs_getcwd(char * buf, size_t size) 
 {
@@ -504,9 +559,10 @@ int fs_setcwd(char * buf)
     
     int ret = parse_pathname(buf);
 
-    if (ret == 0) 
+    if (ret == VALID) 
     {
         LBAread(curr_dir, 6, temp_curr_dir[0].starting_block);
+        ret = 0;
     }
 
     if (temp_curr_dir != NULL)
@@ -520,7 +576,6 @@ int fs_setcwd(char * buf)
 
 //used in ls
 fdDir * dirp;
-char * name_check;
 fdDir * fs_opendir(const char * name)
 {
     
@@ -531,7 +586,7 @@ fdDir * fs_opendir(const char * name)
         ret = parse_pathname(name);
     }
     
-    if(ret == -1)
+    if(ret == INVALID)
     {
         return dirp;
     }
@@ -656,57 +711,302 @@ int fs_stat(const char *path, struct fs_stat *buf)
 }
 
 
-int fs_delete(char* filename)
- {   
-    dir_entr * fileEntry = malloc(sizeof(dir_entr));
+dir_entr * child_dir;
+
+// uses recursion to free/delete an entire branch of directories/files from freespace bitmap
+void delete_this_branch(dir_entr * directory, int index)
+{
+
+    int block_count = convert_size_to_blocks(directory[index].size, VCB->block_size);
+    dir_entr * branch = malloc(VCB->block_size * block_count);
+    LBAread(branch, block_count, directory[index].starting_block);
+
+    /*
+     if we are just deleting a file, then we don't need a recursive call 
+     since there is no branch for a file
+    */
+
+    if (directory[index].is_file)
+    {
+        memset(directory[index].filename, 0, sizeof(directory[index].filename));
+        reallocate_space(branch, index, 0);
+
+        if (branch != NULL)
+        {
+            free(branch);
+            branch = NULL;
+        }
+
+        return;
+    }
     
-    int ret = parse_pathname(filename);
-    //printf("%s\n", filename);
-    char * token = strtok(filename, "/");
-    while(token != NULL){
-        //printf("%s\n", token);
-        strcpy(fileEntry->filename, token);
-        token = strtok(NULL, "/");
+ 
+    // check that directory is empty
+    for (int i = 2; i < 64; i++)
+    {
+        if (strcmp(directory[i].filename, "") != 0 && !directory[i].is_file)
+        {
+            int child_block_count = convert_size_to_blocks(branch[i].size, VCB->block_size);
+            dir_entr * child_branch = malloc(VCB->block_size * child_block_count);
+
+            LBAread(child_branch, child_block_count, branch[i].starting_block);
+            delete_this_branch(child_branch, child_block_count);
+
+            if (child_branch != NULL)
+            {
+                free(child_branch);
+                child_branch = NULL;
+            }
+            
+           
+        }
+
+        // if it is a file, then we could just delete it
+        else if (strcmp(directory[i].filename, "") != 0 && directory[i].is_file)
+        {
+            reallocate_space(branch, i, 1);
+        }
+
+        /*
+         directory should be empty at this point, so we will delete self, 
+         update bitmap and return 0
+        */
+
+        else if (i == 63)
+        {
+            // free/delete child name from parent
+            memset(directory[index].filename, 0, sizeof(directory[index].filename));
+            reallocate_space(branch, 0, 1);
+
+            LBAwrite(buffer_bitmap, 5, 1);
+
+		    // updating free block start in VCB
+		    update_free_block_start();
+
+
+            if (branch != NULL)
+            {
+                free(branch);
+                branch = NULL;
+            }
+        }
+    }
+}
+
+// arg is starting block of child we want to replace.
+int overwrite_dir(int index)
+{
+    int ret;
+    char input[2];
+    printf("directory already exists.\n");
+    printf("replace existing directory? y or n\n");
+    
+    while (strcmp(input, "y") != 0 && strcmp(input, "n") != 0)
+	{
+		scanf("%2s", input);
+	}
+
+    if (strcmp(input, "n") == 0 )
+    {
+        // did not move directory.
+        return -1;
     }
 
-    //printf("File Entry name is: %s\n", fileEntry->filename);
-    //printf("Temp Dir: %s\n", temp_dir->filename);
-    //printf("Curr_Dir: %s\n", temp_curr_dir->filename);
-    LBAread(temp_curr_dir, 6, temp_curr_dir->starting_block);
-    //printf("Starting Block%d\n", temp_curr_dir->starting_block);
-    //printf("Duplicate: %s\n", file);
-    for(int i = 0; i< 64; i++){
-        if(strcmp(fileEntry->filename, temp_curr_dir[i].filename)==0){
-            fileEntry->size = temp_curr_dir[i].size;
-            //printf("File entry size: %d\n", fileEntry->size);
-            fileEntry->starting_block = temp_curr_dir[i].starting_block;
-            //printf("Match at loc %d\n", i);
-            //printf("File to be deleted: %s\n", temp_curr_dir[i].filename);
-            memset(temp_curr_dir[i].filename, 0, sizeof(temp_curr_dir[i].filename));
-            //printf("File to be deleted 2: %s\n", temp_curr_dir[i].filename);
-            //printf("temp cur i starting block: %d\n", fileEntry->starting_block);
-            reallocate_space(fileEntry);
-            // strcpy(temp_curr_dir[i].filename, "");
-            i = 64;
-        }
-        if(i ==63){
-            printf("The file does not exist\n");
-        }
-        //cp2fs /home/student/Documents/test.txt /home/test.txt
-       
-        LBAwrite(temp_curr_dir, 6, temp_curr_dir->starting_block);
+    else
+    {
+        // ------ begin delete process ------ //
+        
+        delete_this_branch(temp_curr_dir, index);
+        return 0;
     }
-
-    memset(fileEntry, 0, sizeof(fileEntry));
-    memset(temp_curr_dir, 0, sizeof(temp_curr_dir));
-    free(fileEntry);
-    fileEntry = NULL;
-    free(temp_dir);
-    temp_dir = NULL;
-    free(temp_curr_dir);
-    temp_curr_dir = NULL;
-     return 0;
-
 }
 
 
+int move_dir(char * src, char * dest)
+{
+    if (strcmp(src, dest) == 0)
+    {
+        printf("ERROR: cannot move file/directory into itself.\n");
+        return -1;
+    }
+
+    if (strcmp(src, "/.") == 0)
+    {
+        printf("ERROR: cannot move root.\n");
+        return -1;
+    }
+
+    int ret = parse_pathname(src);
+
+    // src to be moved cannot be current directory, so we will exit.
+    if (ret == INVALID || ret == SELF)
+    {
+        printf("ERROR: src not a valid path.\n");
+        if (temp_curr_dir != NULL)
+        {
+            free(temp_curr_dir);
+            temp_curr_dir = NULL;
+        }
+
+        return -1;
+    }
+    // this will represent the parent of temp_curr_dir
+    temp_dir = malloc(VCB->block_size * 6);
+
+    // this will represent the child (temp_curr_dir of first parse)
+    int child_block_count = convert_size_to_blocks(temp_curr_dir[temp_child_index].size, VCB->block_size);
+    child_dir = malloc(VCB->block_size * child_block_count);
+
+    if (temp_dir == NULL || child_dir == NULL)
+    {
+        printf("failed to malloc.\n");
+        ret = -1;
+    }
+
+    else
+    {
+        if (ret == FOUND_FILE)
+        {
+            //read parent into memory
+            LBAread(temp_dir, 6, temp_curr_dir[0].starting_block);
+
+            //read child into memory
+            LBAread(child_dir, child_block_count, temp_curr_dir[temp_child_index].starting_block);
+        }
+        else
+        {
+            //read parent into memory
+            LBAread(temp_dir, 6, temp_curr_dir[1].starting_block);
+
+            //read child into memory
+            LBAread(child_dir, child_block_count, temp_curr_dir[0].starting_block);
+        }
+
+        // saving child information to move to other directory
+        memset(saved_data.filename, 0, sizeof(saved_data.filename));
+        strcpy(saved_data.filename, temp_dir[temp_child_index].filename);
+        saved_data.starting_block = temp_dir[temp_child_index].starting_block;
+        saved_data.size = temp_dir[temp_child_index].size;
+        saved_data.is_file = temp_dir[temp_child_index].is_file;
+        saved_data.permissions = temp_dir[temp_child_index].permissions;
+        saved_data.user_ID = temp_dir[temp_child_index].user_ID;
+	    saved_data.group_ID = temp_dir[temp_child_index].group_ID;
+
+        // clear child's name in parent to mark it free
+        // memset(saved_filename, 0, sizeof(saved_filename));
+        // strcpy(saved_filename, temp_dir[child_index].filename);
+        memset(temp_dir[temp_child_index].filename, 0, sizeof(temp_dir[temp_child_index].filename));
+    }
+
+    if (temp_curr_dir != NULL)
+    {
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
+    
+    ret = parse_pathname(dest);
+
+    if (ret == INVALID)
+    {
+        printf("ERROR: dest not a valid path.\n");
+    }
+    else
+    {
+        // check if file/dir already exists in dest directory
+        for (int i = 2; i < 64; i++)
+        {
+            if (strcmp(saved_data.filename, temp_curr_dir[i].filename) == 0)
+            {
+                // call overwrite function here
+                if (saved_data.is_file == temp_curr_dir[i].is_file)
+                {
+                    ret = overwrite_dir(i);
+                }
+                else
+                {
+                    printf("file or directory already exists in '/%s'.\n", temp_dir[0].filename);
+                    printf("cannot overwrite a different filetype\n");
+                    ret = -1;
+                }
+            }
+        }
+        
+        if (ret == VALID || ret == SELF)
+        {
+            // find a free slot in the parent
+            for (int i = 2; i < 64; i++)
+            {
+
+                // free slot found. copy saved data over to new parent 
+                if (strcmp(temp_curr_dir[i].filename, "") == 0)
+                {
+                    strcpy(temp_curr_dir[i].filename, saved_data.filename);
+                    temp_curr_dir[i].starting_block = saved_data.starting_block;
+                    temp_curr_dir[i].size = saved_data.size;
+                    temp_curr_dir[i].is_file = saved_data.is_file;
+                    temp_curr_dir[i].permissions = saved_data.permissions;
+                    temp_curr_dir[i].user_ID = saved_data.user_ID;
+                    temp_curr_dir[i].group_ID = saved_data.group_ID;
+                    i = 64;
+                }
+                else if (i == 63)
+                {
+                    // this will be changed when dynamic sizing is implimented
+                    printf("ERROR: no more space left in this directory.\n");
+                    ret = -1;
+                }
+            }
+        }
+    }
+
+    if (ret == VALID || ret == SELF)
+    {
+
+        // update parent info in child;
+        if (!saved_data.is_file)
+        {
+            memset(child_dir[1].filename, 0, sizeof(child_dir[1].filename));
+            strcpy(child_dir[1].filename, temp_curr_dir[0].filename);
+            child_dir[1].size = temp_curr_dir[0].size;
+            child_dir[1].starting_block = temp_curr_dir[0].starting_block;
+        }
+
+        LBAwrite(child_dir, 6, child_dir[0].starting_block);
+
+        // updates src parent directory
+        LBAwrite(temp_dir, 6, temp_dir[0].starting_block);
+
+        // updates dest parent directory
+        LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
+ 
+    }
+
+    if (temp_dir != NULL)
+    {
+        memset(temp_dir, 0, sizeof(temp_dir));
+        free(temp_dir);
+        temp_dir = NULL;
+    }
+
+    if (temp_curr_dir != NULL)
+    {
+        memset(temp_curr_dir, 0, sizeof(temp_curr_dir));
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
+
+    if (child_dir != NULL)
+    {
+        memset(child_dir, 0, sizeof(child_dir));
+        free(child_dir);
+        child_dir = NULL;
+    }
+    
+    return ret;
+}
+
+// this just moves a file
+int move_file(char * src, char * dest)
+{
+    
+}

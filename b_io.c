@@ -116,14 +116,14 @@ b_io_fd b_open (char * pathname, int flags)
 	
 	int ret = parse_pathname(pathname);
 
-	// could not read path
-	if (num_of_paths == -1)
+	// invalid path for creating a file
+	if (ret == INVALID && paths_remaining > 0)
 	{
 		return -1;
 	}
 
-	// implies that we may have a working file
-	if (ret == -1 && num_of_paths == 0) 
+	// implies that we can create a file
+	if (ret == INVALID && paths_remaining == 0) 
 	{
 		// set fcbArray[returnFd].parent_dir to have a refererence its own parent.
 		LBAread(fcbArray[returnFd].parent_dir, 6, temp_curr_dir[0].starting_block);
@@ -169,7 +169,7 @@ b_io_fd b_open (char * pathname, int flags)
 	}
 
 	// This will open the existing file
-	else if (num_of_paths == -2)
+	else if (ret == FOUND_FILE)
 	{
 
 		// set fcbArray[returnFd].parent_dir to have a refererence its own parent.
@@ -261,7 +261,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	// implies that user might want to overwrite this file
 	if (overwrite == 1)
 	{
-		overwrite = 0;
+		overwrite = 2;
 		char input[2];
 		printf("file already exists.\n");
 		printf("would you like to overwrite this file? y or n\n");
@@ -272,19 +272,22 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			scanf("%2s", input);
 		}
 		
-		if (strcmp(input, "y") == 0 )
+		if (strcmp(input, "n") == 0 )
 		{
-			// begin overwrite process
-
-			// clear/reset fileinfo in fcbArray[fd]
-
-			// free blocks that file occupies in freespace bitmap
+			printf("did not copy file.\n\n");
+			return -1;
 		}
 
 		else
 		{
-			printf("did not copy file.\n\n");
-			return -1;
+			// ------ begin overwrite process ------ //
+
+			// clear/reset buffer info in fcbArray[fd]
+			fcbArray[fd].len = 0;
+			fcbArray[fd].pos = 0;
+
+			// free blocks that file occupies in freespace bitmap
+			reallocate_space(fcbArray[fd].parent_dir, fcbArray[fd].pos_in_parent, 1);
 		}
 	}
 
@@ -323,17 +326,23 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		if (count < 200)
 		{
 			// update temp_curr_directory with child's filesize
-			int i = fcbArray[fd].pos_in_parent;
-			fcbArray[fd].parent_dir[i].size = fcbArray[fd].len;
+			int index = fcbArray[fd].pos_in_parent;
+			fcbArray[fd].parent_dir[index].size = fcbArray[fd].len;
 
 			// write entire file to disk
 			int block_count = convert_size_to_blocks(fcbArray[fd].len, VCB->block_size);
 
-			// printf("blocks_to_allocate: %d\n", block_count);
+			// update realloc to disk if overwrite == 2
+			if (overwrite == 2)
+			{
+				LBAwrite(buffer_bitmap, 5, 1);
+				update_free_block_start();
+				overwrite = 0;
+			}
 
-			fcbArray[fd].parent_dir[i].starting_block = allocate_space(block_count);
+			fcbArray[fd].parent_dir[index].starting_block = allocate_space(block_count);
 
-			LBAwrite(fcbArray[fd].buf, block_count, fcbArray[fd].parent_dir[i].starting_block);
+			LBAwrite(fcbArray[fd].buf, block_count, fcbArray[fd].parent_dir[index].starting_block);
 			
 
 			// update parent directory

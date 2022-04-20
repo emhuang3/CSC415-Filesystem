@@ -8,7 +8,22 @@
 
 #include "vc_block.c"
 
-uint8_t * buffer_bitmap;
+uint * buffer_bitmap;
+
+int is_allocated(int index)
+{
+    return ((buffer_bitmap[index / 32] & (1 << (index % 32))) != 0);
+}
+
+void allocate_bit(int index)
+{
+    buffer_bitmap[index / 32] |= 1 << (index % 32);
+}
+
+void clear_bit(int index)
+{
+    buffer_bitmap[index / 32] &= ~(1 << (index % 32));
+}
 
 int convert_size_to_blocks(int byte_size, int block_size) 
 {
@@ -30,7 +45,7 @@ void update_free_block_start()
 
 	if (buffer_bitmap == NULL)
 	{
-		buffer_bitmap = malloc(VCB->total_blocks);
+		buffer_bitmap = malloc(VCB->block_size * 5);
 		
 		// checking if malloc was successful
 		if (buffer_bitmap == NULL)
@@ -45,11 +60,9 @@ void update_free_block_start()
 	//finding the first free block in the freespace bitmap
 	for (int i = 0; i < VCB->total_blocks; i++)
 	{
-		if (buffer_bitmap[i] == 0)
-		{
+		if (!is_allocated(i))
+		{	
 			VCB->free_block_start = i;
-			// printf("updated free_space_start: %d \n\n", VCB->free_block_start);
-			
 			LBAwrite(VCB, 1, 0);
 			break;
 		}
@@ -65,7 +78,7 @@ int allocate_space(int amount_to_alloc)
 	// creating buffer_bitmap to read the freespace from disk
 	if (buffer_bitmap == NULL)
 	{
-		buffer_bitmap = malloc(VCB->total_blocks);
+		buffer_bitmap = malloc(VCB->block_size * 5);
 		
 
 		// checking if malloc was successful
@@ -85,17 +98,17 @@ int allocate_space(int amount_to_alloc)
 	*/
 
 	// printf("These positions are given to caller and written to disk: \n");
-	for (int i = VCB->free_block_start ; i < VCB->total_blocks; i++)
+	for (int i = VCB->free_block_start; i < VCB->total_blocks; i++)
 	{
 		
 		if (j < amount_to_alloc)
 		{
-			
+						
 			// block is free. Nothing to move
-			if (buffer_bitmap[i] == 0)
+			if (!is_allocated(i))
 			{
 				// printf("block %d freely written to \n", i);
-				buffer_bitmap[i] = 1;
+				allocate_bit(i);
 				j++;
 			}
 			else
@@ -103,7 +116,7 @@ int allocate_space(int amount_to_alloc)
 				// printf("block %d was moved then written to \n", i);
 
 				//run a move() function to move stuff in block somewhere else.
-				buffer_bitmap[i] = 1;
+				allocate_bit(i);
 				j++;
 			}
 		}
@@ -146,7 +159,7 @@ void init_bitmap()
 	// creating bitmap for free space for the first time
 	if (buffer_bitmap == NULL)
 	{
-		buffer_bitmap = malloc(VCB->total_blocks);
+		buffer_bitmap = malloc(VCB->block_size * 5);
 
 		// checking if malloc was successful
 		if (buffer_bitmap == NULL)
@@ -156,12 +169,11 @@ void init_bitmap()
 		}
 	}
 
-	
 
 	//initializing dedicated block space for VCB and freespace bitmap
 	for (int i = 0; i < 6; i++)
 	{
-		buffer_bitmap[i] = 1;
+		allocate_bit(i);
 	}
 
 	LBAwrite(buffer_bitmap, 5, 1);
@@ -169,22 +181,16 @@ void init_bitmap()
 	update_free_block_start();
 }
 
-void reallocate_space(dir_entr * directory)
+void reallocate_space(dir_entr * directory, int index, int save_state)
 {
 	int count;
 	// get num of blocks this directory occupies
-	if(directory->size != directory[0].size){
-		count = ceil(directory->size/512);
-	}
-	else{
-		count = ceil(directory[0].size/512);
-	}
-	//count = ceil(directory[0].size/512);
+	int block_count = convert_size_to_blocks(directory[index].size, VCB->block_size);
 	
 	// update bitmap buffer
 	if (buffer_bitmap == NULL)
 	{
-		buffer_bitmap = malloc(VCB->total_blocks);
+		buffer_bitmap = malloc(VCB->block_size * 5);
 
 		// check if malloc was successful
 		if (buffer_bitmap == NULL)
@@ -196,21 +202,21 @@ void reallocate_space(dir_entr * directory)
 		LBAread(buffer_bitmap, 5, 1);
 	}
 
-	
-	
-
-	printf("Blocks freed: ");
-	for (int i = directory[0].starting_block; i <= directory[0].starting_block + count; i++)
+	for (int i = directory[index].starting_block; i < directory[index].starting_block + block_count; i++)
 	{
-		buffer_bitmap[i] = 0;
-		printf("%d ", i);
+		clear_bit(i);
 	}
-	printf("\n");
 
-	LBAwrite(buffer_bitmap, 5, 1);
+	// prevents updating disk during volatile writing process
+	if (!save_state)
+	{
+		LBAwrite(buffer_bitmap, 5, 1);
 
-	// updating free block start in VCB
-	update_free_block_start();
+		// updating free block start in VCB
+		update_free_block_start();
+	}
+	
+
 
 	/*
 	 metadata in index 0 & 1 does not need to be updated 

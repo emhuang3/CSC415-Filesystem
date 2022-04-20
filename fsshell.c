@@ -44,7 +44,7 @@
 /****   SET THESE TO 1 WHEN READY TO TEST THAT COMMAND ****/
 #define CMDLS_ON	1
 #define CMDCP_ON	1
-#define CMDMV_ON	0
+#define CMDMV_ON	1
 #define CMDMD_ON	1
 #define CMDRM_ON	1
 #define CMDCP2L_ON	1
@@ -289,9 +289,31 @@ int cmd_cp (int argcnt, char *argvec[])
 ****************************************************/
 int cmd_mv (int argcnt, char *argvec[])
 	{
-#if (CMDMV_ON == 1)				
-	return -99;
+#if (CMDMV_ON == 1)		
+	int ret;		
+	
 	// **** TODO ****  For you to implement	
+	if (argcnt > 2)
+	{
+		char * src = argvec[1];
+		char * dest = argvec[2];
+
+		ret = move_dir(src, dest);
+		if (ret < 0)
+		{
+			printf("did not move directory.\n\n");
+		}
+		else 
+		{
+			printf("move directory completed.\n\n");
+		}
+	}
+	else
+	{
+		printf("Usage: mv [src] [dest]\n\n");
+	}
+	
+	
 #endif
 	return 0;
 	}
@@ -468,7 +490,7 @@ int cmd_cd (int argcnt, char *argvec[])
 		{
 		printf ("Could not change path to %s\n", path);
 		return (ret);
-		}			
+		}	
 #endif
 	return 0;
 	}

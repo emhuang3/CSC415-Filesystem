@@ -93,13 +93,13 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		VCB->block_size = blockSize;
 		
 		init_bitmap(); 
-		update_free_block_start(blockSize);
+		update_free_block_start();
 
 		// --------- INIT ROOT DIRECTORY ---------- //
 
 		create_dir(".", 700);
 
-		// temp placement
+		// -------------- TEMP PLACEMENT ----------- //
 
 		// setting current working directory to root
 		curr_dir = malloc(VCB->block_size * 6);
@@ -121,6 +121,15 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		// fs_mkdir("/home", 511);
 		// fs_mkdir("/home/student", 511);
 		// fs_mkdir("/home/student/Docs", 511);
+		// fs_mkdir("/school", 511);
+		// fs_mkdir("/personal", 511);
+		// fs_mkdir("/games", 511);
+
+		// fs_mkdir("/personal/games", 511);
+
+		// fs_mkdir("/personal/games/elden_ring", 511);
+		// fs_mkdir("/personal/games/forza_5", 511);
+		// fs_mkdir("/personal/games/among_us", 511);
 	}
 
 	if (curr_dir == NULL)
@@ -144,7 +153,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 void exitFileSystem ()
 {	
-
 
 	if (curr_dir != NULL)
 	{
