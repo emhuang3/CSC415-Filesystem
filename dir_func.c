@@ -116,6 +116,12 @@ int validate_path(char * name)
         LBAread(temp_curr_dir, 6, curr_dir[0].starting_block);
     }
 
+    if (strcmp(name, ".") == 0)
+    {
+        LBAread(temp_curr_dir, 6, VCB->root_start);
+    }
+    
+
     // check if user is trying to refer to current directory
     if (total_paths == 1 && strcmp(temp_curr_dir[0].filename, name) == 0)
     {
