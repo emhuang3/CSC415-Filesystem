@@ -153,7 +153,6 @@ int validate_path(char * name)
         if (strcmp(temp_curr_dir[i].filename, name) == 0 && temp_curr_dir[i].is_file)
         {
             
-            
             if (paths_remaining == 0) // if this was the head path
             {
 
@@ -161,7 +160,6 @@ int validate_path(char * name)
                 // paths_remaining = -2; 
 
                 // stores a reference to this file
-                temp_curr_dir[0].temp_file_index = i; 
                 temp_child_index = i;
                 return FOUND_FILE;
             }

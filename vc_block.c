@@ -28,8 +28,8 @@ typedef struct dir_entr
 	// used tell if this is a file or directory
 	int is_file;
 
-	// stores a temp number that points to a file in its directory
-	int temp_file_index;
+	// will replace time, user_ID, group_ID with modified, created, and accessed timestamps
+	int time;
 
 	int permissions;
 	
