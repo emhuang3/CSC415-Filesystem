@@ -297,22 +297,14 @@ int cmd_mv (int argcnt, char *argvec[])
 		char * src = argvec[1];
 		char * dest = argvec[2];
 
-		if (fs_isDir(src))
+		ret = move_dir(src, dest);
+		if (ret < 0)
 		{
-			ret = move_dir(src, dest);
-			if (ret < 0)
-			{
-				printf("did not move directory.\n\n");
-			}
-			else 
-			{
-				printf("move directory completed.\n\n");
-			}
+			printf("did not move directory.\n\n");
 		}
-		// put else if for is_file here.
-		else
+		else 
 		{
-			printf("src is neither file nor directory.\n\n");
+			printf("move directory completed.\n\n");
 		}
 	}
 	else

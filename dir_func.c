@@ -712,6 +712,26 @@ void delete_this_branch(dir_entr * directory, int index)
     int block_count = convert_size_to_blocks(directory[index].size, VCB->block_size);
     dir_entr * branch = malloc(VCB->block_size * block_count);
     LBAread(branch, block_count, directory[index].starting_block);
+
+    /*
+     if we are just deleting a file, then we don't need a recursive call 
+     since there is no branch for a file
+    */
+
+    if (directory[index].is_file)
+    {
+        memset(directory[index].filename, 0, sizeof(directory[index].filename));
+        reallocate_space(branch, index, 0);
+
+        if (branch != NULL)
+        {
+            free(branch);
+            branch = NULL;
+        }
+
+        return;
+    }
+    
  
     // check that directory is empty
     for (int i = 2; i < 64; i++)
@@ -807,7 +827,6 @@ int move_dir(char * src, char * dest)
         printf("ERROR: cannot move root.\n");
         return -1;
     }
-    
 
     int ret = parse_pathname(src);
 
@@ -827,12 +846,8 @@ int move_dir(char * src, char * dest)
     temp_dir = malloc(VCB->block_size * 6);
 
     // this will represent the child (temp_curr_dir of first parse)
-    child_dir = malloc(VCB->block_size * 6);
-
-    // if (saved_data == NULL)
-    // {
-    //     saved_data = malloc(sizeof(dir_entr));
-    // }
+    int child_block_count = convert_size_to_blocks(temp_curr_dir[temp_child_index].size, VCB->block_size);
+    child_dir = malloc(VCB->block_size * child_block_count);
 
     if (temp_dir == NULL || child_dir == NULL)
     {
@@ -842,28 +857,37 @@ int move_dir(char * src, char * dest)
 
     else
     {
-        //read parent into memory
-        LBAread(temp_dir, 6, temp_curr_dir[1].starting_block);
+        if (ret == FOUND_FILE)
+        {
+            //read parent into memory
+            LBAread(temp_dir, 6, temp_curr_dir[0].starting_block);
 
-        //read child into memory
-        LBAread(child_dir, 6, temp_curr_dir[0].starting_block);
+            //read child into memory
+            LBAread(child_dir, child_block_count, temp_curr_dir[temp_child_index].starting_block);
+        }
+        else
+        {
+            //read parent into memory
+            LBAread(temp_dir, 6, temp_curr_dir[1].starting_block);
 
-        int index = temp_child_index;
+            //read child into memory
+            LBAread(child_dir, child_block_count, temp_curr_dir[0].starting_block);
+        }
 
         // saving child information to move to other directory
         memset(saved_data.filename, 0, sizeof(saved_data.filename));
-        strcpy(saved_data.filename, temp_dir[index].filename);
-        saved_data.starting_block = temp_dir[index].starting_block;
-        saved_data.size = temp_dir[index].size;
-        saved_data.is_file = temp_dir[index].is_file;
-        saved_data.permissions = temp_dir[index].permissions;
-        saved_data.user_ID = temp_dir[index].user_ID;
-	    saved_data.group_ID = temp_dir[index].group_ID;
+        strcpy(saved_data.filename, temp_dir[temp_child_index].filename);
+        saved_data.starting_block = temp_dir[temp_child_index].starting_block;
+        saved_data.size = temp_dir[temp_child_index].size;
+        saved_data.is_file = temp_dir[temp_child_index].is_file;
+        saved_data.permissions = temp_dir[temp_child_index].permissions;
+        saved_data.user_ID = temp_dir[temp_child_index].user_ID;
+	    saved_data.group_ID = temp_dir[temp_child_index].group_ID;
 
         // clear child's name in parent to mark it free
         // memset(saved_filename, 0, sizeof(saved_filename));
         // strcpy(saved_filename, temp_dir[child_index].filename);
-        memset(temp_dir[index].filename, 0, sizeof(temp_dir[index].filename));
+        memset(temp_dir[temp_child_index].filename, 0, sizeof(temp_dir[temp_child_index].filename));
     }
 
     if (temp_curr_dir != NULL)
@@ -880,13 +904,22 @@ int move_dir(char * src, char * dest)
     }
     else
     {
-        // check if dir already exists in dest directory
+        // check if file/dir already exists in dest directory
         for (int i = 2; i < 64; i++)
         {
-            if (strcmp(child_dir[0].filename, temp_curr_dir[i].filename) == 0)
+            if (strcmp(saved_data.filename, temp_curr_dir[i].filename) == 0)
             {
-                // call overwrite dir function here
-                ret = overwrite_dir(i);
+                // call overwrite function here
+                if (saved_data.is_file == temp_curr_dir[i].is_file)
+                {
+                    ret = overwrite_dir(i);
+                }
+                else
+                {
+                    printf("file or directory already exists in '/%s'.\n", temp_dir[0].filename);
+                    printf("cannot overwrite a different filetype\n");
+                    ret = -1;
+                }
             }
         }
         
@@ -916,17 +949,19 @@ int move_dir(char * src, char * dest)
                 }
             }
         }
-
     }
 
     if (ret == VALID || ret == SELF)
     {
 
         // update parent info in child;
-        memset(child_dir[1].filename, 0, sizeof(child_dir[1].filename));
-        strcpy(child_dir[1].filename, temp_curr_dir[0].filename);
-        child_dir[1].size = temp_curr_dir[0].size;
-        child_dir[1].starting_block = temp_curr_dir[0].starting_block;
+        if (!saved_data.is_file)
+        {
+            memset(child_dir[1].filename, 0, sizeof(child_dir[1].filename));
+            strcpy(child_dir[1].filename, temp_curr_dir[0].filename);
+            child_dir[1].size = temp_curr_dir[0].size;
+            child_dir[1].starting_block = temp_curr_dir[0].starting_block;
+        }
 
         LBAwrite(child_dir, 6, child_dir[0].starting_block);
 
@@ -959,6 +994,11 @@ int move_dir(char * src, char * dest)
         child_dir = NULL;
     }
     
-
     return ret;
+}
+
+// this just moves a file
+int move_file(char * src, char * dest)
+{
+    
 }
