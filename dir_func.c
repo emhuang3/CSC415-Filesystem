@@ -331,7 +331,7 @@ int fs_mkdir(const char * pathname, mode_t mode)
     return ret;
 }
 
-int fs_rmdir(const char *pathname) 
+int fs_rmdir(const char * pathname) 
 {
     temp_dir = malloc(VCB->block_size*6);
                 
@@ -709,12 +709,70 @@ int fs_stat(const char *path, struct fs_stat *buf)
 dir_entr * child_dir;
 
 // uses recursion to delete an entire branch of directories/files
-int delete_this_branch(dir_entr * directory)
+int delete_this_branch(dir_entr * directory, int index)
 {
 
+    int block_count = convert_size_to_blocks(directory[index].size, VCB->block_size);
+    dir_entr * branch = malloc(VCB->block_size * block_count);
+    LBAread(branch, block_count, directory[index].starting_block);
+ 
+    // check that directory is empty
+    for (int i = 2; i < 64; i++)
+    {
+        if (strcmp(directory[i].filename, "") != 0 && !directory[i].is_file)
+        {
+            int child_block_count = convert_size_to_blocks(branch[i].size, VCB->block_size);
+            dir_entr * child_branch = malloc(VCB->block_size * child_block_count);
+
+            LBAread(child_branch, child_block_count, branch[i].starting_block);
+            delete_this_branch(child_branch, child_block_count);
+
+            if (child_branch != NULL)
+            {
+                free(child_branch);
+                child_branch = NULL;
+            }
+            
+           
+        }
+
+        // if it is a file, then we could just delete it
+        else if (strcmp(directory[i].filename, "") != 0 && directory[i].is_file)
+        {
+            reallocate_space(branch, i, 1);
+        }
+
+        /*
+         directory should be empty at this point, so we will delete self, 
+         update bitmap and return 0
+        */
+
+        else if (i == 63)
+        {
+            // free/delete child name from parent
+            memset(directory[index].filename, 0, sizeof(directory[index].filename));
+            reallocate_space(branch, 0, 1);
+
+            LBAwrite(buffer_bitmap, 5, 1);
+
+		    // updating free block start in VCB
+		    update_free_block_start();
+
+
+            if (branch != NULL)
+            {
+                free(branch);
+                branch = NULL;
+            }
+            
+
+            return 0;
+        }
+    }
 }
 
-int overwrite_dir()
+// arg is starting block of child we want to replace.
+int overwrite_dir(int index)
 {
     int ret;
     char input[2];
@@ -736,7 +794,7 @@ int overwrite_dir()
     {
         // ------ begin delete process ------ //
         
-        ret = delete_this_branch(temp_curr_dir);
+        ret = delete_this_branch(temp_curr_dir, index);
     }
     return ret;
 }
@@ -819,11 +877,11 @@ int move_dir(char * src, char * dest)
     else
     {
         // check if dir already exists in dest directory
-        for (int i = 0; i < 64; i++)
+        for (int i = 2; i < 64; i++)
         {
             if (strcmp(child_dir[0].filename, temp_curr_dir[i].filename) == 0)
             {
-                ret = overwrite_dir();
+                ret = overwrite_dir(i);
             }
         }
         
