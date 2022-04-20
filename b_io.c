@@ -116,14 +116,14 @@ b_io_fd b_open (char * pathname, int flags)
 	
 	int ret = parse_pathname(pathname);
 
-	// could not read path
-	if (paths_remaining == -1)
+	// invalid path for creating a file
+	if (ret == INVALID && paths_remaining > 0)
 	{
 		return -1;
 	}
 
-	// implies that we may have a working file
-	if (ret == -1 && paths_remaining == 0) 
+	// implies that we can create a file
+	if (ret == INVALID && paths_remaining == 0) 
 	{
 		// set fcbArray[returnFd].parent_dir to have a refererence its own parent.
 		LBAread(fcbArray[returnFd].parent_dir, 6, temp_curr_dir[0].starting_block);
@@ -169,7 +169,7 @@ b_io_fd b_open (char * pathname, int flags)
 	}
 
 	// This will open the existing file
-	else if (paths_remaining == -2)
+	else if (ret == FOUND_FILE)
 	{
 
 		// set fcbArray[returnFd].parent_dir to have a refererence its own parent.

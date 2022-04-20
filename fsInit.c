@@ -120,7 +120,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		fs_mkdir("/games", 511);
 
 		fs_mkdir("/personal/games", 511);
-		
+
 		fs_mkdir("/personal/games/elden_ring", 511);
 		fs_mkdir("/personal/games/forza_5", 511);
 		fs_mkdir("/personal/games/among_us", 511);
@@ -147,7 +147,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 void exitFileSystem ()
 {	
-
 
 	if (curr_dir != NULL)
 	{
