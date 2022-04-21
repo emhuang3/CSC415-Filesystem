@@ -854,6 +854,7 @@ int move(char * src, char * dest)
     }
 
     int ret = parse_pathname(src);
+    int saved_index = temp_child_index; // will be used to change name in same directory
 
     // src to be moved cannot be current directory, so we will exit.
     if (ret == INVALID || ret == SELF)
@@ -938,8 +939,8 @@ int move(char * src, char * dest)
         // if src and dest folders are the same
         if (temp_dir[0].starting_block == temp_curr_dir[0].starting_block)
         {
-            // clear old name when changing name in same directory 
-            memset(temp_curr_dir[temp_child_index].filename, 0, sizeof(temp_curr_dir[temp_child_index].filename));
+            // clear old name when changing name in same directory . temp_child_index doesn't work here
+            memset(temp_curr_dir[saved_index].filename, 0, sizeof(temp_curr_dir[saved_index].filename));
         }
         
         ret = VALID;
