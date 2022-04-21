@@ -8,11 +8,11 @@
 
 typedef struct vcb
 {
+	int magic_num;
 	int block_size;
 	int total_blocks;
 	int free_block_start;
 	int root_start;
-	int magic_num;
 } vcb;
 
 // VCB is declared globally here
