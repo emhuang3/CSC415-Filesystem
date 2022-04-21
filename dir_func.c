@@ -901,20 +901,18 @@ int move(char * src, char * dest)
             LBAread(child_dir, (int) child_block_count, temp_curr_dir[0].starting_block);
         }
 
-        int index = temp_child_index;
-
         // saving child information to move to other directory
         memset(saved_data.filename, 0, sizeof(saved_data.filename));
-        strcpy(saved_data.filename, temp_dir[index].filename);
-        saved_data.starting_block = temp_dir[index].starting_block;
-        saved_data.size = temp_dir[index].size;
-        saved_data.is_file = temp_dir[index].is_file;
-        saved_data.permissions = temp_dir[index].permissions;
-        saved_data.user_ID = temp_dir[index].user_ID;
-	    saved_data.group_ID = temp_dir[index].group_ID;
+        strcpy(saved_data.filename, temp_dir[temp_child_index].filename);
+        saved_data.starting_block = temp_dir[temp_child_index].starting_block;
+        saved_data.size = temp_dir[temp_child_index].size;
+        saved_data.is_file = temp_dir[temp_child_index].is_file;
+        saved_data.permissions = temp_dir[temp_child_index].permissions;
+        saved_data.user_ID = temp_dir[temp_child_index].user_ID;
+	    saved_data.group_ID = temp_dir[temp_child_index].group_ID;
 
-        // clear child's name in parent to mark it free
-        memset(temp_dir[index].filename, 0, sizeof(temp_dir[index].filename));
+        // clear child's name in src parent to mark it free
+        memset(temp_dir[temp_child_index].filename, 0, sizeof(temp_dir[temp_child_index].filename));
     }
 
     if (temp_curr_dir != NULL)
@@ -927,6 +925,26 @@ int move(char * src, char * dest)
     ret = parse_pathname(dest);
     printf("dest: %s\n", dest);
 
+    if (ret == INVALID && paths_remaining == 0)
+    {
+        // change name of moving child in parent dir
+        memset(saved_data.filename, 0, sizeof(saved_data.filename));
+        strcpy(saved_data.filename, saved_filename);
+
+        // chang name in child
+        memset(child_dir[0].filename, 0, sizeof(child_dir[0].filename));
+        strcpy(child_dir[0].filename, saved_filename);
+
+        // if src and dest folders are the same
+        if (temp_dir[0].starting_block == temp_curr_dir[0].starting_block)
+        {
+            // clear old name when changing name in same directory 
+            memset(temp_curr_dir[temp_child_index].filename, 0, sizeof(temp_curr_dir[temp_child_index].filename));
+        }
+        
+        ret = VALID;
+    }
+    
     if (ret == INVALID)
     {
         printf("ERROR: dest not a valid path.\n");
@@ -993,14 +1011,18 @@ int move(char * src, char * dest)
             child_dir[1].size = temp_curr_dir[0].size;
             child_dir[1].starting_block = temp_curr_dir[0].starting_block;
 
-            LBAwrite(child_dir, 6, child_dir[0].starting_block);
         }
+        LBAwrite(child_dir, 6, child_dir[0].starting_block);
 
+        // no need to update src if it is the same as dest
+        if (temp_dir[0].starting_block != temp_curr_dir[0].starting_block)
+        {
+            // updates src parent directory
+            LBAwrite(temp_dir, 6, temp_dir[0].starting_block);
+        }
+        
         // updates dest parent directory
         LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
-
-        // updates src parent directory
-        LBAwrite(temp_dir, 6, temp_dir[0].starting_block);
     }
 
     if (temp_dir != NULL)
