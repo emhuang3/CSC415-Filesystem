@@ -391,6 +391,7 @@ int fs_rmdir(const char * pathname)
 
                 // clearing filename in parent will mark this entry as free to write to
                 memset(temp_dir[i].filename, 0, sizeof(temp_dir[i].filename));
+                move_child_left(temp_dir, i);
 
                 i = 64;
             }
@@ -489,6 +490,8 @@ int fs_delete(char * pathname)
     reallocate_space(temp_curr_dir, index, 0);
 
     memset(temp_curr_dir[index].filename, 0, sizeof(temp_curr_dir[index].filename));
+    
+    move_child_left(temp_curr_dir, index);
 
     LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
 
@@ -728,15 +731,8 @@ void delete_this_branch(dir_entr * directory, int index)
 {
 
     int block_count = convert_size_to_blocks(directory[index].size, VCB->block_size);
-
-    printf("block_count : %d\n", block_count);
-    printf("starting block : %d\n", directory[index].starting_block);
-    printf("directory: %s\n", directory[0].filename);
-
     dir_entr * branch = malloc(VCB->block_size * block_count);
     LBAread(branch, block_count, directory[index].starting_block);
-
-    printf("branch: %s\n", branch[0].filename);
 
     /*
      if we are just deleting a file, then we don't need a recursive call 
@@ -746,6 +742,7 @@ void delete_this_branch(dir_entr * directory, int index)
     if (directory[index].is_file)
     {
         memset(directory[index].filename, 0, sizeof(directory[index].filename));
+        move_child_left(directory, index);
         reallocate_space(branch, index, 0);
 
         if (branch != NULL)
@@ -753,11 +750,9 @@ void delete_this_branch(dir_entr * directory, int index)
             free(branch);
             branch = NULL;
         }
-
         return;
     }
     
- 
     // check that directory is empty
     for (int i = 2; i < 64; i++)
     {
@@ -774,8 +769,6 @@ void delete_this_branch(dir_entr * directory, int index)
                 free(child_branch);
                 child_branch = NULL;
             }
-            
-           
         }
 
         // if it is a file, then we could just delete it
@@ -793,6 +786,7 @@ void delete_this_branch(dir_entr * directory, int index)
         {
             // free/delete child name from parent
             memset(directory[index].filename, 0, sizeof(directory[index].filename));
+            move_child_left(directory, index);
             reallocate_space(branch, 0, 1);
 
             LBAwrite(buffer_bitmap, 5, 1);
@@ -914,17 +908,16 @@ int move(char * src, char * dest)
 
         // clear child's name in src parent to mark it free
         memset(temp_dir[temp_child_index].filename, 0, sizeof(temp_dir[temp_child_index].filename));
+        move_child_left(temp_dir, temp_child_index);
     }
 
     if (temp_curr_dir != NULL)
     {
-        memset(temp_curr_dir, 0, sizeof(temp_curr_dir));
         free(temp_curr_dir);
         temp_curr_dir = NULL;
     }
-    
+
     ret = parse_pathname(dest);
-    printf("dest: %s\n", dest);
 
     if (ret == INVALID && paths_remaining == 0)
     {
@@ -932,7 +925,7 @@ int move(char * src, char * dest)
         memset(saved_data.filename, 0, sizeof(saved_data.filename));
         strcpy(saved_data.filename, saved_filename);
 
-        // chang name in child
+        // change name in child
         memset(child_dir[0].filename, 0, sizeof(child_dir[0].filename));
         strcpy(child_dir[0].filename, saved_filename);
 
@@ -941,6 +934,7 @@ int move(char * src, char * dest)
         {
             // clear old name when changing name in same directory . temp_child_index doesn't work here
             memset(temp_curr_dir[saved_index].filename, 0, sizeof(temp_curr_dir[saved_index].filename));
+            move_child_left(temp_curr_dir, saved_index);
         }
         
         ret = VALID;
@@ -1028,21 +1022,18 @@ int move(char * src, char * dest)
 
     if (temp_dir != NULL)
     {
-        memset(temp_dir, 0, sizeof(temp_dir));
         free(temp_dir);
         temp_dir = NULL;
     }
 
     if (temp_curr_dir != NULL)
     {
-        memset(temp_curr_dir, 0, sizeof(temp_curr_dir));
         free(temp_curr_dir);
         temp_curr_dir = NULL;
     }
 
     if (child_dir != NULL)
     {
-        memset(child_dir, 0, sizeof(child_dir));
         free(child_dir);
         child_dir = NULL;
     }
