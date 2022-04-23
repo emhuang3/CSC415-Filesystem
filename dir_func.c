@@ -14,7 +14,7 @@ and getting cwd. */
 dir_entr * temp_dir;      
 
 /* This will represent a temp pointer to current working directory 
-after calling parsing the pathname. */
+after parsing the pathname. */
 
 dir_entr * temp_curr_dir; 
 
@@ -29,12 +29,12 @@ process. */
 dir_entr saved_data;
 
 /* This will store an number representing the index of a child.
-this is done to have a easy access to a parent's child after 
+this is done to have easy access to a parent's child after 
 parsing a pathname. */
 
 int temp_child_index;
 
-// these are return values for the path parsing implementation.
+// these are return values for after parsing a pathname.
 enum {VALID, INVALID, SELF, FOUND_FILE};
 
 // this works with fs_makedir to create a directory.
@@ -343,7 +343,7 @@ int fs_mkdir(const char * pathname, mode_t mode)
                 {
                     /* this means that create_dir failed to make a directory, which would 
                     happen if we couldn't allocate space. */
-                    
+
                     free(temp_curr_dir);
                     temp_curr_dir = NULL;
                     return -1;

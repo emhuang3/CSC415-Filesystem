@@ -33,11 +33,9 @@
 #include "mfs.h"
 #include "b_io.c"
 
-/*
-This function is used for cleaning the blocks.
+/* This function is used for cleaning the blocks.
 This is done to produce nice looking hexdumps,
-and to make debugging easier.
-*/
+and to make debugging easier. */
 
 void flush_blocks(int numOfBlocks, uint64_t blockSize)
 {
@@ -69,12 +67,10 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 {
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 
-	/*
-	This malloc'd VCB will bring block 0 into memory to see 
+	/* This malloc'd VCB will bring block 0 into memory to see 
 	if the existing volume's magic number is a match. This
 	buffer will stay in memory and update the filesys's 
-	dedicated VCB block 0.
-	*/
+	dedicated VCB block 0. */
 
 	VCB = malloc(blockSize);
 
@@ -91,12 +87,10 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		exit(-1);
 	}
 	
-	/*
-	 the VCB buffer is updated with position 0 in the LBA.
+	/* The VCB buffer is updated with position 0 in the LBA.
 	 this is where we store our VCB, so we want to know if
 	 the sys has already been initilized by checking the 
-	 magic number.
-	*/
+	 magic number. */
 
 	LBAread(VCB, 1, 0);
 
@@ -112,18 +106,14 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		VCB->total_blocks = numberOfBlocks;
 		VCB->block_size = blockSize;
 		
-		/*
-		 this function writes a bitmap into the LBA,
+		/* This function writes a bitmap into the LBA,
 		 which tracks which blocks are free to write
-		 to, and which blocks are already allocated.
-		*/
+		 to, and which blocks are already allocated. */
 
 		init_bitmap(); 
 
-		/*
-		 this function will update the VCB's free_block_start 
-		 to the available block to write to in the LBA
-		*/
+		/* This function will update the VCB's free_block_start 
+		 to the available block to write to in the LBA. */
 
 		update_free_block_start();
 
@@ -167,11 +157,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	if (curr_dir == NULL)
 	{
-		/*
-		 This is setting the root to be the current working directory.
+		/* This is setting the root to be the current working directory.
 		 This will stay in memory, as curr_dir will always point to
-		 the current working directory.
-		*/
+		 the current working directory. */
 
 		curr_dir = malloc(VCB->block_size * 6);
 		
