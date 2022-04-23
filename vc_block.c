@@ -31,7 +31,7 @@ typedef struct dir_entr
 	// will replace time, user_ID, group_ID with modified, created, and accessed timestamps
 	int time;
 
-	int permissions;
+	int mode;
 	
 	uid_t user_ID;
 	gid_t group_ID;
