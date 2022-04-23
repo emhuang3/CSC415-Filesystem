@@ -126,6 +126,7 @@ b_io_fd b_open (char * pathname, int flags)
 	// implies that we can create a file
 	if (ret == INVALID && paths_remaining == 0) 
 	{
+		printf("check\n");
 		// set fcbArray[returnFd].parent_dir to have a refererence its own parent.
 		LBAread(fcbArray[returnFd].parent_dir, 6, temp_curr_dir[0].starting_block);
 
@@ -344,19 +345,12 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			fcbArray[fd].parent_dir[index].starting_block = allocate_space(block_count);
 
 			LBAwrite(fcbArray[fd].buf, block_count, fcbArray[fd].parent_dir[index].starting_block);
-			
 
 			// update parent directory
 			LBAwrite(fcbArray[fd].parent_dir, 6, fcbArray[fd].parent_dir[0].starting_block);
 
 			//updated VCB
 			LBAwrite(VCB, 1, 0);
-
-			// update current directory if temp_curr_dir is same as current directory
-			if (fcbArray[fd].parent_dir[0].starting_block == curr_dir[0].starting_block)
-			{
-				LBAread(curr_dir, 6, fcbArray[fd].parent_dir[0].starting_block);
-			}
 
 			printf("finished writing file.\n");
 		}
@@ -400,6 +394,12 @@ void b_close (b_io_fd fd)
 {
 	
 	//--------------------------- clean up ------------------------//
+
+	if (temp_curr_dir != NULL)
+    {
+        free(temp_curr_dir);
+        temp_curr_dir = NULL;
+    }
 
 	for (int i = 0; i < MAXFCBS; i++)
 	{

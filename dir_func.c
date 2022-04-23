@@ -20,7 +20,7 @@ void create_dir(char * name, int permissions)
 {
     if (temp_dir == NULL)
     {
-        temp_dir = malloc(VCB->block_size*6);
+        temp_dir = calloc(6, VCB->block_size);
 
         // checking if malloc was successful
 	    if (temp_dir == NULL)
@@ -30,8 +30,6 @@ void create_dir(char * name, int permissions)
 	    }
     }
 
-    
-    
     strcpy(temp_dir[0].filename, name);
 
     // these two will lines will always be true so no need to put them in if statments
@@ -76,7 +74,6 @@ void create_dir(char * name, int permissions)
 
 	LBAwrite(VCB, 1, 0);
 
-    memset(temp_dir, 0, sizeof(temp_dir));
     free(temp_dir);
 	temp_dir = NULL;
 }
@@ -100,7 +97,7 @@ int validate_path(char * name)
     // init temp current working directory if NULL
     if (temp_curr_dir == NULL)
     {
-        temp_curr_dir = malloc(VCB->block_size * 6);
+        temp_curr_dir = calloc(6, VCB->block_size);
 
         // checking if malloc was successful
 	    if (temp_curr_dir == NULL)
@@ -128,7 +125,6 @@ int validate_path(char * name)
     // check if user is trying to refer to current directory
     if (total_paths == 1 && strcmp(temp_curr_dir[0].filename, name) == 0)
     {
-        // printf("check\n");
         temp_child_index = 0;
         
         // save name in case user is trying to make child of same name
@@ -207,7 +203,7 @@ int validate_path(char * name)
 
             // save name
             memset(saved_filename,0, sizeof(saved_filename));
-            strcpy(saved_filename, name);
+            strncpy(saved_filename, name, strlen(name));
             return INVALID;
         }
     }
@@ -231,7 +227,9 @@ int parse_pathname(const char * pathname)
     if (count_slashes[0] != '/')
     {
         printf("ERROR: path must begin with '/'\n");
-        // paths_remaining = -1;
+
+        // setting paths to -1 will prevent md from creating a directory
+        paths_remaining = -1;
         return INVALID;
     }
     
@@ -241,14 +239,14 @@ int parse_pathname(const char * pathname)
         if (count_slashes[i] == '/' && i == strlen(count_slashes) - 1)
         {
             printf("ERROR: empty head path after '/'\n");
-            // paths_remaining = -1;
+            paths_remaining = -1;
             return INVALID;
         }
 
         else if (count_slashes[i] == '/' && count_slashes[i + 1] == '/')
         {
             printf("ERROR: invalid double '/'\n");
-            // paths_remaining = -1;
+            paths_remaining = -1;
             return INVALID;
         }
 
@@ -306,7 +304,8 @@ int fs_mkdir(const char * pathname, mode_t mode)
                 temp_curr_dir[i].starting_block = VCB->free_block_start;
                 temp_curr_dir[i].permissions = mode;
                 temp_curr_dir[i].size = 3072; // size will always start here and then dynamically grow when entries fill up
-               
+                temp_curr_dir[i].is_file = 0;
+
                 // creating the child directory
                 create_dir(saved_filename, mode);
 
@@ -345,7 +344,7 @@ int fs_mkdir(const char * pathname, mode_t mode)
 
 int fs_rmdir(const char * pathname) 
 {
-    temp_dir = malloc(VCB->block_size*6);
+    temp_dir = calloc(6, VCB->block_size);
                 
     // checking if malloc was successful
 	if (temp_dir == NULL)
@@ -416,7 +415,6 @@ int fs_rmdir(const char * pathname)
         }
     
     // --------------- clean up --------------- //
-    memset(temp_dir, 0, sizeof(temp_dir));
     free(temp_dir);
     temp_dir = NULL;
 
@@ -507,17 +505,17 @@ int fs_delete(char * pathname)
 char * fs_getcwd(char * buf, size_t size) 
 {
     // travel backwords from curr_dir and populate an pathname to display
-    temp_dir = malloc(VCB->block_size * 6);
+    temp_dir = calloc(6, VCB->block_size);
     LBAread(temp_dir, 6, curr_dir[0].starting_block);
 
     int count_paths = 0; //counts the num of paths
-    char * tail_path = malloc(VCB->block_size * 6);
-    char * head_path = malloc(VCB->block_size * 6);
-    char * slash = malloc(VCB->block_size * 6);
+    char * tail_path = calloc(6, VCB->block_size);
+    char * head_path = calloc(6, VCB->block_size);
+    char * slash = calloc(6, VCB->block_size);
 
     strcpy(slash, "/");
    
-    strcpy(tail_path, temp_dir[0].filename);
+    strncpy(tail_path, temp_dir[0].filename, strlen(temp_dir[0].filename));
 
     // -------- concatinating paths into one complete pathname ------ //
     while (strcmp(tail_path, ".") != 0)
@@ -541,11 +539,7 @@ char * fs_getcwd(char * buf, size_t size)
     strcpy(buf, strcat(slash, tail_path));
 
     // --------- clean and free up temp buffers -------- //
-    memset(tail_path, 0, VCB->block_size * 6);
-    memset(head_path, 0, VCB->block_size * 6);
-    memset(slash, 0, VCB->block_size * 6);
 
-    memset(temp_dir, 0, VCB->block_size * 6);
     free(temp_dir);
     temp_dir = NULL;
 
@@ -557,8 +551,6 @@ char * fs_getcwd(char * buf, size_t size)
 
     free(slash);
     slash = NULL;
-
-    
 
     return buf;
 }
@@ -608,7 +600,7 @@ fdDir * fs_opendir(const char * name)
     
     if (temp_curr_dir == NULL)
     {
-        temp_curr_dir = malloc(VCB->block_size*6);
+        temp_curr_dir = calloc(6, VCB->block_size);
         LBAread(temp_curr_dir, 6, curr_dir[0].starting_block);
     }
 
@@ -686,6 +678,7 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
 int fs_closedir(fdDir *dirp)
 {
     printf("\n");
+
     // clean and free up the memory you allocated for opendir
     if (temp_curr_dir != NULL)
     {
@@ -731,7 +724,7 @@ void delete_this_branch(dir_entr * directory, int index)
 {
 
     int block_count = convert_size_to_blocks(directory[index].size, VCB->block_size);
-    dir_entr * branch = malloc(VCB->block_size * block_count);
+    dir_entr * branch = malloc(block_count * VCB->block_size);
     LBAread(branch, block_count, directory[index].starting_block);
 
     /*
@@ -741,9 +734,9 @@ void delete_this_branch(dir_entr * directory, int index)
 
     if (directory[index].is_file)
     {
+        reallocate_space(directory, index, 0);
         memset(directory[index].filename, 0, sizeof(directory[index].filename));
         move_child_left(directory, index);
-        reallocate_space(branch, index, 0);
 
         if (branch != NULL)
         {
@@ -759,7 +752,7 @@ void delete_this_branch(dir_entr * directory, int index)
         if (strcmp(branch[i].filename, "") != 0 && directory[i].is_file == 0)
         {
             int child_block_count = convert_size_to_blocks(branch[i].size, VCB->block_size);
-            dir_entr * child_branch = malloc(VCB->block_size * child_block_count);
+            dir_entr * child_branch = malloc(child_block_count * VCB->block_size);
 
             LBAread(child_branch, child_block_count, branch[i].starting_block);
             delete_this_branch(child_branch, child_block_count);
@@ -863,7 +856,7 @@ int move(char * src, char * dest)
         return -1;
     }
     // this will represent the parent of temp_curr_dir
-    temp_dir = malloc(VCB->block_size * 6);
+    temp_dir = calloc(6, VCB->block_size);
 
     if (temp_dir == NULL)
     {
@@ -876,7 +869,7 @@ int move(char * src, char * dest)
         if (ret == FOUND_FILE)
         {
             int child_block_count = convert_size_to_blocks(temp_curr_dir[temp_child_index].size, VCB->block_size);
-            child_dir = malloc(VCB->block_size * child_block_count);
+            child_dir = calloc(child_block_count, VCB->block_size);
 
             //read parent into memory
             LBAread(temp_dir, 6, temp_curr_dir[0].starting_block);
@@ -887,7 +880,7 @@ int move(char * src, char * dest)
         else
         {
             int child_block_count = convert_size_to_blocks(temp_curr_dir[0].size, VCB->block_size);
-            child_dir = malloc(VCB->block_size * child_block_count);
+            child_dir = calloc(child_block_count, VCB->block_size);
 
             //read parent into memory
             LBAread(temp_dir, 6, temp_curr_dir[1].starting_block);

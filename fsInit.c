@@ -40,7 +40,7 @@ This is done to produce nice looking hexdumps.
 
 void flush_blocks(int numOfBlocks, uint64_t blockSize)
 {
-	uint64_t * clean_this_block = malloc(blockSize);
+	uint64_t * clean_this_block = calloc(1, blockSize);
 
 	// checking if malloc was successful
 	if (clean_this_block == NULL)
@@ -69,7 +69,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 	/* TODO: Add any code you need to initialize your file system. */
 
-	VCB = malloc(blockSize);
+	VCB = calloc(1, blockSize);
 
 	// checking if malloc was successful
 	if (VCB == NULL)
@@ -102,7 +102,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		// -------------- TEMP PLACEMENT ----------- //
 
 		// setting current working directory to root
-		curr_dir = malloc(VCB->block_size * 6);
+		curr_dir = calloc(6, VCB->block_size);
 		
 		// checking if malloc was successful
 		if (curr_dir == NULL)
@@ -130,7 +130,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	if (curr_dir == NULL)
 	{
 		// setting current working directory to root
-		curr_dir = malloc(VCB->block_size * 6);
+		curr_dir = calloc(6, VCB->block_size);
 		
 		// checking if malloc was successful
 		if (curr_dir == NULL)

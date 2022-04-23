@@ -45,7 +45,7 @@ void update_free_block_start()
 
 	if (buffer_bitmap == NULL)
 	{
-		buffer_bitmap = malloc(VCB->block_size * 5);
+		buffer_bitmap = calloc(5, VCB->block_size);
 		
 		// checking if malloc was successful
 		if (buffer_bitmap == NULL)
@@ -78,7 +78,7 @@ int allocate_space(int amount_to_alloc)
 	// creating buffer_bitmap to read the freespace from disk
 	if (buffer_bitmap == NULL)
 	{
-		buffer_bitmap = malloc(VCB->block_size * 5);
+		buffer_bitmap = calloc(5, VCB->block_size);
 		
 
 		// checking if malloc was successful
@@ -140,7 +140,6 @@ int allocate_space(int amount_to_alloc)
 		}
 
 	}
-	// printf("\n");
 
 	// push updated bitmap to disk
 	LBAwrite(buffer_bitmap, 5, 1);
@@ -159,7 +158,7 @@ void init_bitmap()
 	// creating bitmap for free space for the first time
 	if (buffer_bitmap == NULL)
 	{
-		buffer_bitmap = malloc(VCB->block_size * 5);
+		buffer_bitmap = calloc(5, VCB->block_size);
 
 		// checking if malloc was successful
 		if (buffer_bitmap == NULL)
@@ -189,7 +188,7 @@ void reallocate_space(dir_entr * directory, int index, int save_state)
 	// update bitmap buffer
 	if (buffer_bitmap == NULL)
 	{
-		buffer_bitmap = malloc(VCB->block_size * 5);
+		buffer_bitmap = calloc(5, VCB->block_size);
 
 		// check if malloc was successful
 		if (buffer_bitmap == NULL)
@@ -245,7 +244,7 @@ void move_child_left(dir_entr * parent, int index)
     while (strcmp(parent[iterator + 1].filename, "") != 0)
     {
         iterator++;
-        if ((iterator + 1) >= (parent[0].size/sizeof(dir_entr)))
+        if ((iterator + 1) > (parent[0].size/sizeof(dir_entr)))
         {
             printf("parent is full.\n");
             return;
