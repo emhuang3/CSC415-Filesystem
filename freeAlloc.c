@@ -224,3 +224,45 @@ void reallocate_space(dir_entr * directory, int index, int save_state)
 	 marked free to overwrite by freespace reallocation.
 	*/
 }
+
+/* 
+this helper function pushes children of parent leftward 
+after an empty space was created in parent list
+*/
+
+void move_child_left(dir_entr * parent, int index)
+{
+    // index refers to the index that was just freed up.
+    int fill_index = index; // this is the position that needs to be filled by rightmost child
+    int iterator = index;   // this will be used to iterate through the parent.
+
+    // check to see if (iterator + 1) is greater than (parent.size / block size)
+    if ((iterator + 1) >= (parent[0].size/sizeof(dir_entr)))
+    {
+        printf("parent is full.\n");
+        return;
+    }
+    
+    while (strcmp(parent[iterator + 1].filename, "") != 0)
+    {
+        iterator++;
+        if ((iterator + 1) >= (parent[0].size/sizeof(dir_entr)))
+        {
+            printf("parent is full.\n");
+            return;
+        }
+    }
+
+    // move the rightmost child to the fill position
+    strcpy(parent[fill_index].filename, parent[iterator].filename);
+    parent[fill_index].group_ID = parent[iterator].group_ID;
+    parent[fill_index].is_file = parent[iterator].is_file;
+    parent[fill_index].permissions = parent[iterator].permissions;
+    parent[fill_index].size = parent[iterator].size;
+    parent[fill_index].starting_block = parent[iterator].starting_block;
+    parent[fill_index].time = parent[iterator].time;
+    parent[fill_index].user_ID = parent[iterator].user_ID;
+
+    // free the rightmost child
+    memset(parent[iterator].filename, 0, sizeof(parent[iterator].filename));
+}

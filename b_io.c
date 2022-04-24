@@ -41,7 +41,8 @@ typedef struct b_fcb
 	int file_descriptor; 		
 	int len;
 	int pos;
-	int pos_in_parent;
+	int pos_in_dest_parent;
+	int pos_in_src_parent;
 	dir_entr * parent_dir;
 	
 } b_fcb;
@@ -129,7 +130,7 @@ b_io_fd b_open (char * pathname, int flags)
 		LBAread(fcbArray[returnFd].parent_dir, 6, temp_curr_dir[0].starting_block);
 
 		// copy temp_file_index into fcb's parent_dir
-		fcbArray[returnFd].parent_dir[0].temp_file_index = temp_curr_dir[0].temp_file_index;
+		fcbArray[returnFd].pos_in_src_parent = temp_child_index;
 
 		if (temp_curr_dir != NULL)
     	{
@@ -151,7 +152,7 @@ b_io_fd b_open (char * pathname, int flags)
 					// marks this position in the parent as occupied
 					strcpy(fcbArray[returnFd].parent_dir[i].filename, saved_filename);
 					fcbArray[returnFd].parent_dir[i].is_file = 1;
-					fcbArray[returnFd].pos_in_parent = i;
+					fcbArray[returnFd].pos_in_dest_parent = i;
 					i = 64;
 				}
 				else if (i == 63)
@@ -176,7 +177,7 @@ b_io_fd b_open (char * pathname, int flags)
 		LBAread(fcbArray[returnFd].parent_dir, 6, temp_curr_dir[0].starting_block);
 
 		// copy temp_file_index into fcb's parent_dir
-		fcbArray[returnFd].parent_dir[0].temp_file_index = temp_curr_dir[0].temp_file_index;
+		fcbArray[returnFd].pos_in_src_parent = temp_child_index;
 
 		if (temp_curr_dir != NULL)
     	{
@@ -189,7 +190,7 @@ b_io_fd b_open (char * pathname, int flags)
 			overwrite = 1;
 		}
 		
-		int file_index = fcbArray[returnFd].parent_dir[0].temp_file_index;
+		int file_index = fcbArray[returnFd].pos_in_src_parent;
 		int filesize = fcbArray[returnFd].parent_dir[file_index].size;
 		int block_count = convert_size_to_blocks(filesize, VCB->block_size);
 
@@ -287,7 +288,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			fcbArray[fd].pos = 0;
 
 			// free blocks that file occupies in freespace bitmap
-			reallocate_space(fcbArray[fd].parent_dir, fcbArray[fd].pos_in_parent, 1);
+			reallocate_space(fcbArray[fd].parent_dir, fcbArray[fd].pos_in_dest_parent, 1);
 		}
 	}
 
@@ -326,7 +327,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		if (count < 200)
 		{
 			// update temp_curr_directory with child's filesize
-			int index = fcbArray[fd].pos_in_parent;
+			int index = fcbArray[fd].pos_in_dest_parent;
 			fcbArray[fd].parent_dir[index].size = fcbArray[fd].len;
 
 			// write entire file to disk
