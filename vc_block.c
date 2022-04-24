@@ -29,11 +29,8 @@ typedef struct dir_entr
 	// used tell if this is a file or directory
 	int is_file;
 
-	// will replace time, user_ID, group_ID with modified, created, and accessed timestamps
-	int time;
-
+	int count;
 	int mode;
-	
 	uid_t user_ID;
 	gid_t group_ID;
 

@@ -422,7 +422,7 @@ void move_child_left(dir_entr * parent, int index)
     parent[fill_index].mode = parent[iterator].mode;
     parent[fill_index].size = parent[iterator].size;
     parent[fill_index].starting_block = parent[iterator].starting_block;
-    parent[fill_index].time = parent[iterator].time;
+    parent[fill_index].count = parent[iterator].count;
     parent[fill_index].user_ID = parent[iterator].user_ID;
 
     // this will free the rightmost child

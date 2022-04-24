@@ -774,10 +774,6 @@ int fs_stat(const char *path, struct fs_stat *buf)
 
 	// blkcnt_t  st_blocks;  		/* number of 512B blocks allocated */
     buf->st_blocks = 6;
-    
-	// time_t    st_accesstime;   	/* time of last access */
-	// time_t    st_modtime;   	/* time of last modification */
-	// time_t    st_createtime;   	/* time of last status change */
 
     return 0;
 }

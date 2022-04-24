@@ -100,7 +100,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	if (VCB->magic_num != 3)
 	{
 		// THIS IS TEMPORARY
-		flush_blocks(numberOfBlocks, blockSize);
+		// flush_blocks(numberOfBlocks, blockSize);
+
+		printf("\nformatting volume control block...\n");
 
 		VCB->magic_num = 3;
 		VCB->total_blocks = numberOfBlocks;
@@ -110,6 +112,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		 which tracks which blocks are free to write
 		 to, and which blocks are already allocated. */
 
+		printf("initializing freespace bitmap...\n");
 		init_bitmap(); 
 
 		/* This function will update the VCB's free_block_start 
@@ -118,7 +121,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		update_free_block_start();
 
 		// this function initializes a root directory
-
+		
+		printf("initializing root directory...\n\n");
 		create_dir(".", 700);
 
 		// -------------- TEMP PLACEMENT ----------- //
@@ -135,18 +139,20 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		LBAread(curr_dir, 6, VCB->root_start);
 
+		printf("formatting complete.\n\n");
+
 		/// --------------- TEST DIRECTORIES --------------- //
 
-		fs_mkdir("/school", 511);
-		fs_mkdir("/personal", 511);
-		fs_mkdir("/games", 511);
-		fs_mkdir("/other", 511);
+		// fs_mkdir("/school", 511);
+		// fs_mkdir("/personal", 511);
+		// fs_mkdir("/games", 511);
+		// fs_mkdir("/other", 511);
 
-		fs_mkdir("/personal/games", 511);
+		// fs_mkdir("/personal/games", 511);
 
-		fs_mkdir("/personal/games/elden_ring", 511);
-		fs_mkdir("/personal/games/forza_5", 511);
-		fs_mkdir("/personal/games/among_us", 511);
+		// fs_mkdir("/personal/games/elden_ring", 511);
+		// fs_mkdir("/personal/games/forza_5", 511);
+		// fs_mkdir("/personal/games/among_us", 511);
 	}
 
 	// if VCB is already formatted, then we will bring existing freespace into memory.
