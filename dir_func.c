@@ -34,7 +34,7 @@ parsing a pathname. */
 
 int temp_child_index;
 
-// these are return values for after parsing a pathname.
+// these are the return values after parsing a pathname.
 enum {VALID, INVALID, SELF, FOUND_FILE};
 
 // this works with fs_makedir to create a directory.
@@ -54,13 +54,14 @@ int create_dir(char * name, int mode)
 
     strcpy(temp_dir[0].filename, name);
 
-    // size and is file will always be constant for creating a directory
+    // size and is_file will always be constant for creating a directory
     temp_dir[0].size = temp_dir[1].size = sizeof(dir_entr) * 64;
 	temp_dir[0].is_file = temp_dir[1].is_file = 0;
 
     // if root, then we will create a root directory here.
     if (strcmp(temp_dir[0].filename, ".") == 0)
     {
+        VCB->root_size = 3072;
         VCB->root_start = temp_dir[0].starting_block = 
         temp_dir[1].starting_block = allocate_space(6);
         temp_dir[0].mode = temp_dir[1].mode = mode;
@@ -825,7 +826,7 @@ void delete_this_branch(dir_entr * directory, int index)
             dir_entr * child_branch = malloc(child_block_count * VCB->block_size);
 
             LBAread(child_branch, child_block_count, branch[i].starting_block);
-            delete_this_branch(child_branch, child_block_count);
+            delete_this_branch(child_branch, i);
 
             if (child_branch != NULL)
             {

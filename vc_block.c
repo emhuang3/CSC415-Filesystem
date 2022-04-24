@@ -13,6 +13,7 @@ typedef struct vcb
 	int total_blocks;
 	int free_block_start;
 	int root_start;
+	int root_size;
 } vcb;
 
 // VCB is declared globally here
