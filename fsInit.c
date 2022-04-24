@@ -100,7 +100,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	if (VCB->magic_num != 3)
 	{
 		// THIS IS TEMPORARY
-		// flush_blocks(numberOfBlocks, blockSize);
+		flush_blocks(numberOfBlocks, blockSize);
 
 		printf("\nformatting volume control block...\n");
 
@@ -143,16 +143,16 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		/// --------------- TEST DIRECTORIES --------------- //
 
-		// fs_mkdir("/school", 511);
-		// fs_mkdir("/personal", 511);
-		// fs_mkdir("/games", 511);
-		// fs_mkdir("/other", 511);
+		fs_mkdir("/school", 511);
+		fs_mkdir("/personal", 511);
+		fs_mkdir("/games", 511);
+		fs_mkdir("/other", 511);
 
-		// fs_mkdir("/personal/games", 511);
+		fs_mkdir("/personal/games", 511);
 
-		// fs_mkdir("/personal/games/elden_ring", 511);
-		// fs_mkdir("/personal/games/forza_5", 511);
-		// fs_mkdir("/personal/games/among_us", 511);
+		fs_mkdir("/personal/games/elden_ring", 511);
+		fs_mkdir("/personal/games/forza_5", 511);
+		fs_mkdir("/personal/games/among_us", 511);
 	}
 
 	// if VCB is already formatted, then we will bring existing freespace into memory.

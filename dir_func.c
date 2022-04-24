@@ -78,10 +78,10 @@ int create_dir(char * name, int mode)
             return -1;
         }
         
-        temp_dir[1].starting_block = temp_curr_dir->starting_block;
+        temp_dir[1].starting_block = temp_curr_dir[0].starting_block;
         temp_dir[0].mode = mode;
-        temp_dir[1].mode = temp_curr_dir->mode;
-        strcpy(temp_dir[1].filename, temp_curr_dir->filename);
+        temp_dir[1].mode = temp_curr_dir[0].mode;
+        strcpy(temp_dir[1].filename, temp_curr_dir[0].filename);
         printf("------------CREATED NEW DIRECTORY------------\n");
     }
 
@@ -344,6 +344,9 @@ int fs_mkdir(const char * pathname, mode_t mode)
                 {
                     /* this means that create_dir failed to make a directory, which would 
                     happen if we couldn't allocate space. */
+
+                    // reset bitmap
+                    reset_bitmap();
 
                     free(temp_curr_dir);
                     temp_curr_dir = NULL;
