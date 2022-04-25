@@ -151,7 +151,7 @@ b_io_fd b_open (char * pathname, int flags)
 		if (flags & O_CREAT)
 		{
 			// this for loop finds a free space to put file in 'dest' parent directory
-			for (int i = 0; i < 64; i++)
+			for (int i = 0; i < 32; i++)
 			{
 
 				if (strcmp(fcbArray[returnFd].parent_dir[i].filename, "") == 0)
@@ -164,9 +164,14 @@ b_io_fd b_open (char * pathname, int flags)
 					strcpy(fcbArray[returnFd].parent_dir[i].filename, saved_filename);
 					fcbArray[returnFd].parent_dir[i].is_file = 1;
 					fcbArray[returnFd].pos_in_dest_parent = i;
-					i = 64;
+					convert_time_to_string(fcbArray[returnFd].parent_dir[i].create_time);
+					convert_time_to_string(fcbArray[returnFd].parent_dir[i].modify_time);
+					convert_time_to_string(fcbArray[returnFd].parent_dir[i].access_time);
+					convert_time_to_string(fcbArray[returnFd].parent_dir[0].modify_time);
+
+					i = 32;
 				}
-				else if (i == 63)
+				else if (i == 31)
 				{
 					printf("ERROR: unable to find free space in the parent directory.\n");
 					return -1;

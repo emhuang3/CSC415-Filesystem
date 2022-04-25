@@ -108,7 +108,7 @@ int displayFiles (fdDir * dirp, int flall, int fllong)
 			if (fllong)
 				{
 				fs_stat (di->d_name, &statbuf);
-				printf ("%s    %9d   %s\n", di->fileType?"-":"D", di->size, di->d_name);
+				printf ("%s   %9d   %s   %s\n", di->fileType?"-":"D", di->size, di->accessed, di->d_name );
 				}
 			else
 				{

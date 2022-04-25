@@ -5,6 +5,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdint.h>
+#include <time.h>
 
 typedef struct vcb
 {
@@ -22,16 +23,21 @@ vcb * VCB;
 typedef struct dir_entr
 {
 	char filename[20];
-	
 	int starting_block;
 	int size;
-
-	// used tell if this is a file or directory
 	int is_file;
-
-	int count;
 	int mode;
-	uid_t user_ID;
-	gid_t group_ID;
 
+	char create_time[20];
+	char access_time[20];
+	char modify_time[20];
 } dir_entr;
+
+void convert_time_to_string(char my_time[20])
+{
+	time_t timestamp = time(NULL);
+	struct tm *ptm = gmtime(&timestamp);
+	char buf[256];
+	strftime(buf, sizeof buf, "%F %T", ptm);
+	strncpy(my_time, buf, 20);
+}

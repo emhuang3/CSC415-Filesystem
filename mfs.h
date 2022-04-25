@@ -40,6 +40,7 @@ struct fs_diriteminfo
     unsigned char fileType;
 	int size;    
     char d_name[256]; 			/* filename max filename is 255 characters */
+	char accessed[20];
 	};
 
 // This is a private structure used only by fs_opendir, fs_readdir, and fs_closedir

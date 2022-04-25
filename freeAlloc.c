@@ -234,13 +234,13 @@ void move_child_left(dir_entr * parent, int index)
 
     // this will move the rightmost child's metadata to the fill position
     strcpy(parent[fill_index].filename, parent[iterator].filename);
-    parent[fill_index].group_ID = parent[iterator].group_ID;
+    // parent[fill_index].group_ID = parent[iterator].group_ID;
     parent[fill_index].is_file = parent[iterator].is_file;
     parent[fill_index].mode = parent[iterator].mode;
     parent[fill_index].size = parent[iterator].size;
     parent[fill_index].starting_block = parent[iterator].starting_block;
-    parent[fill_index].count = parent[iterator].count;
-    parent[fill_index].user_ID = parent[iterator].user_ID;
+    // parent[fill_index].count = parent[iterator].count;
+    // parent[fill_index].user_ID = parent[iterator].user_ID;
 
     // this will free the rightmost child
     memset(parent[iterator].filename, 0, sizeof(parent[iterator].filename));

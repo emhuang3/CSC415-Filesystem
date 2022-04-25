@@ -55,17 +55,23 @@ int create_dir(char * name, int mode)
     strcpy(temp_dir[0].filename, name);
 
     // size and is_file will always be constant for creating a directory
-    temp_dir[0].size = temp_dir[1].size = sizeof(dir_entr) * 64;
+    temp_dir[0].size = temp_dir[1].size = sizeof(dir_entr) * 32;
 	temp_dir[0].is_file = temp_dir[1].is_file = 0;
 
     // if root, then we will create a root directory here.
     if (strcmp(temp_dir[0].filename, ".") == 0)
     {
-        VCB->root_size = 3072;
+        VCB->root_size = temp_dir[0].size;
         VCB->root_start = temp_dir[0].starting_block = 
         temp_dir[1].starting_block = allocate_space(6);
         temp_dir[0].mode = temp_dir[1].mode = mode;
         strcpy(temp_dir[1].filename, "..");
+        convert_time_to_string(temp_dir[0].create_time);
+        convert_time_to_string(temp_dir[0].modify_time);
+        convert_time_to_string(temp_dir[0].access_time);
+        convert_time_to_string(temp_dir[1].modify_time);
+        convert_time_to_string(temp_dir[1].access_time);
+
         printf("------------CREATED ROOT DIRECTORY------------\n");
     }
     else // if not root, then we will make a directory here.
@@ -82,6 +88,12 @@ int create_dir(char * name, int mode)
         temp_dir[0].mode = mode;
         temp_dir[1].mode = temp_curr_dir[0].mode;
         strcpy(temp_dir[1].filename, temp_curr_dir[0].filename);
+        convert_time_to_string(temp_dir[0].create_time);
+        convert_time_to_string(temp_dir[0].modify_time);
+        convert_time_to_string(temp_dir[0].access_time);
+        convert_time_to_string(temp_dir[1].modify_time);
+        convert_time_to_string(temp_dir[1].access_time);
+
         printf("------------CREATED NEW DIRECTORY------------\n");
     }
 
@@ -92,10 +104,13 @@ int create_dir(char * name, int mode)
 	printf("dir[0].filename : %s \n", temp_dir[0].filename);
 	printf("dir[1].filename : %s \n", temp_dir[1].filename);
     printf("dir[0].mode : %d \n", temp_dir[0].mode);
-    printf("dir[1].mode : %d \n\n", temp_dir[1].mode);
+    printf("dir[1].mode : %d \n", temp_dir[1].mode);
+    printf("dir[0].create_time : %s \n",temp_dir[0].create_time);
+    printf("dir[0].modify_time : %s \n",temp_dir[0].modify_time);
+    printf("dir[0].access_time : %s \n\n",temp_dir[0].access_time);
 
-
-    for (int i = 2; i < 64; i++)
+    // this will init all child filenames in newly created directry to empty string.
+    for (int i = 2; i < 32; i++)
 	{
 		// empty filename will imply that it is free to write to this entry position
 		strncpy(temp_dir[i].filename, "", 0);
@@ -171,7 +186,7 @@ int validate_path(char * name)
     /* This for loop iterates through directory entries of temp_curr_dir to see if a path is valid, 
     before updating temp_curr_dir with the valid path. */
 
-    for (int i = 2; i < 64; i++)
+    for (int i = 2; i < 32; i++)
     {   
         // this is checking if this path is a file.
         if (strcmp(temp_curr_dir[i].filename, name) == 0 && temp_curr_dir[i].is_file == 1)
@@ -181,6 +196,7 @@ int validate_path(char * name)
             {
                 // temp_child_index stores a reference to this file.
                 temp_child_index = i;
+                convert_time_to_string(temp_curr_dir[i].access_time);
                 return FOUND_FILE;
             }
             else
@@ -204,7 +220,14 @@ int validate_path(char * name)
         {
             // updating temp_curr_dir with last path
             temp_child_index = i;
+
+            // modifying access time of child in parent
+            convert_time_to_string(temp_curr_dir[i].access_time);
             LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
+
+            // modifying access time of child in child
+            convert_time_to_string(temp_curr_dir[0].access_time);
+
             return VALID;
         
         }
@@ -212,13 +235,13 @@ int validate_path(char * name)
         /* This path does not exist while more paths still need to be searched.
          In this case we can break out of the while loop by returning INVALID. */
 
-        else if (i == 63 && paths_remaining > 0)
+        else if (i == 31 && paths_remaining > 0)
         {
             return INVALID;
         }
 
         // last path does not exist. This implies that we can make a new directory
-        else if (i == 63 && paths_remaining == 0)
+        else if (i == 31 && paths_remaining == 0)
         {
             // saves a name for creating a directory.
             memset(saved_filename,0, sizeof(saved_filename));
@@ -327,7 +350,7 @@ int fs_mkdir(const char * pathname, mode_t mode)
     {
 
         // searching for a free directory entry to write to in temp current directory
-        for (int i = 2; i < 64; i++)
+        for (int i = 2; i < 32; i++)
         {
             if (strcmp(temp_curr_dir[i].filename, "") == 0)
             {
@@ -337,6 +360,9 @@ int fs_mkdir(const char * pathname, mode_t mode)
                 temp_curr_dir[i].mode = mode;
                 temp_curr_dir[i].size = 3072;
                 temp_curr_dir[i].is_file = 0;
+                convert_time_to_string(temp_curr_dir[i].create_time);
+                convert_time_to_string(temp_curr_dir[i].modify_time);
+                convert_time_to_string(temp_curr_dir[i].access_time);
 
                 // creating the child directory
                 ret = create_dir(saved_filename, mode);
@@ -354,11 +380,13 @@ int fs_mkdir(const char * pathname, mode_t mode)
                 }
                 
                 // updating parent with new metadata of created children on disk
+                convert_time_to_string(temp_curr_dir[0].modify_time);
+                convert_time_to_string(temp_curr_dir[0].access_time);
                 LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
                 ret = 0; // returns 0 to shell
-                i = 64;
+                i = 32;
             }
-            else if (i == 63)
+            else if (i == 31)
             {
                 printf("Unable to find free directory entry inside /%s\n", temp_curr_dir[0].filename);
                 ret = -1;
@@ -418,7 +446,7 @@ int fs_rmdir(const char * pathname)
     {
         /* first empty space will imply that all spaces on RHS are empty since all 
         freed children in parent directory will be filled by rightmost child. */
-        
+
         printf("ERROR: directory is not empty.\n");
         ret = INVALID;
     }
@@ -433,7 +461,7 @@ int fs_rmdir(const char * pathname)
         parent directory (temp_dir), then freeing child from parent directory by 
         clearing the filename */
 
-        for (int i = 2; i < 64; i++)
+        for (int i = 2; i < 32; i++)
         {
             if (strcmp(temp_dir[i].filename, temp_curr_dir[0].filename) == 0)
             {
@@ -444,7 +472,7 @@ int fs_rmdir(const char * pathname)
                 memset(temp_dir[i].filename, 0, sizeof(temp_dir[i].filename));
                 move_child_left(temp_dir, i);
 
-                i = 64;
+                i = 32;
             }
         }
     }
@@ -717,8 +745,10 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
         dirItem->fileType = 1;
     }
 
+    strcpy(dirItem->accessed, temp_curr_dir[dirp->dirEntryPosition].access_time);
     dirItem->size = temp_curr_dir[dirp->dirEntryPosition].size;
-    if (dirp->dirEntryPosition >= 63)
+
+    if (dirp->dirEntryPosition >= 31)
     {
         return NULL;
     }
@@ -729,7 +759,7 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
     }
     else if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "") == 0)
     {
-        while(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "") == 0 && dirp->dirEntryPosition < 63)
+        while(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "") == 0 && dirp->dirEntryPosition < 31)
         {
             dirp->dirEntryPosition += 1;
             if(strcmp(temp_curr_dir[dirp->dirEntryPosition].filename, "") != 0)
@@ -769,7 +799,7 @@ int fs_closedir(fdDir *dirp)
 int fs_stat(const char *path, struct fs_stat *buf)
 {
     // off_t     st_size;    		/* total size, in bytes */
-    buf->st_size = sizeof(dir_entr) * 64;
+    buf->st_size = sizeof(dir_entr) * 32;
 
 	// blksize_t st_blksize; 		/* blocksize for file system I/O */
     buf->st_blksize = 512;
@@ -816,7 +846,7 @@ void delete_this_branch(dir_entr * directory, int index)
     and use a recursive call to traverse through the children of a directory for removal of directories
     from the freespace bitmap. */
 
-    for (int i = 2; i < 64; i++)
+    for (int i = 2; i < 32; i++)
     {
         if (strcmp(branch[i].filename, "") != 0 && directory[i].is_file == 0)
         {
@@ -842,7 +872,7 @@ void delete_this_branch(dir_entr * directory, int index)
         /* Directory should be empty at this point, so we will delete self, 
          update bitmap and return 0. */
 
-        else if (i == 63)
+        else if (i == 31)
         {
             // free/delete child name from parent
             memset(directory[index].filename, 0, sizeof(directory[index].filename));
@@ -978,6 +1008,9 @@ int move(char * src, char * dest)
             LBAread(child_dir, (int) child_block_count, temp_curr_dir[0].starting_block);
         }
 
+        // update access time for src parent here
+        convert_time_to_string(temp_dir[0].access_time);
+
         // this is saving the moving child's information to move to the 'dest' directory
         memset(saved_data.filename, 0, sizeof(saved_data.filename));
         strcpy(saved_data.filename, temp_dir[temp_child_index].filename);
@@ -985,8 +1018,9 @@ int move(char * src, char * dest)
         saved_data.size = temp_dir[temp_child_index].size;
         saved_data.is_file = temp_dir[temp_child_index].is_file;
         saved_data.mode = temp_dir[temp_child_index].mode;
-        saved_data.user_ID = temp_dir[temp_child_index].user_ID;
-	    saved_data.group_ID = temp_dir[temp_child_index].group_ID;
+        strcpy(saved_data.create_time, temp_dir[temp_child_index].create_time);
+        strcpy(saved_data.modify_time, temp_dir[temp_child_index].modify_time);
+        strcpy(saved_data.access_time, temp_dir[temp_child_index].access_time);
 
         // clear child's name in src parent to mark it free
         memset(temp_dir[temp_child_index].filename, 0, sizeof(temp_dir[temp_child_index].filename));
@@ -1015,10 +1049,12 @@ int move(char * src, char * dest)
         // change name of moving child in parent dir
         memset(saved_data.filename, 0, sizeof(saved_data.filename));
         strcpy(saved_data.filename, saved_filename);
+        convert_time_to_string(saved_data.modify_time);
 
         // change name in child
         memset(child_dir[0].filename, 0, sizeof(child_dir[0].filename));
         strcpy(child_dir[0].filename, saved_filename);
+        convert_time_to_string(child_dir[0].modify_time);
 
         // if src and dest folders are the same
         if (temp_dir[0].starting_block == temp_curr_dir[0].starting_block)
@@ -1043,7 +1079,7 @@ int move(char * src, char * dest)
         /* This for loop checks if a file/directory with the same filename of the moving child already 
         exists in the dest directory. */
 
-        for (int i = 2; i < 64; i++)
+        for (int i = 2; i < 32; i++)
         {
             if (strcmp(saved_data.filename, temp_curr_dir[i].filename) == 0)
             {
@@ -1067,7 +1103,7 @@ int move(char * src, char * dest)
         if (ret == VALID || ret == SELF)
         {
             // this for loop will try to find a free slot in the 'dest' parent.
-            for (int i = 2; i < 64; i++)
+            for (int i = 2; i < 32; i++)
             {
 
                 /* free slot was found, so we will copy the saved data from the moving child over to the new 
@@ -1080,12 +1116,14 @@ int move(char * src, char * dest)
                     temp_curr_dir[i].size = saved_data.size;
                     temp_curr_dir[i].is_file = saved_data.is_file;
                     temp_curr_dir[i].mode = saved_data.mode;
-                    temp_curr_dir[i].user_ID = saved_data.user_ID;
-                    temp_curr_dir[i].group_ID = saved_data.group_ID;
+                    strcpy(temp_curr_dir[i].create_time, saved_data.create_time);
+                    strcpy(temp_curr_dir[i].modify_time, saved_data.modify_time);
+                    strcpy(temp_curr_dir[i].access_time, saved_data.access_time);
+                    convert_time_to_string(temp_curr_dir[0].modify_time);
 
-                    i = 64;
+                    i = 32;
                 }
-                else if (i == 63)
+                else if (i == 31)
                 {
                     printf("ERROR: no more space left in this directory.\n");
                     ret = -1;
@@ -1106,8 +1144,12 @@ int move(char * src, char * dest)
             strcpy(child_dir[1].filename, temp_curr_dir[0].filename);
             child_dir[1].size = temp_curr_dir[0].size;
             child_dir[1].starting_block = temp_curr_dir[0].starting_block;
-
+            strcpy(child_dir[1].modify_time, temp_curr_dir[0].modify_time);
+            strcpy(child_dir[1].access_time, temp_curr_dir[0].access_time);
         }
+
+        // update mod time for src parent here
+        convert_time_to_string(temp_dir[0].modify_time);
 
         LBAwrite(child_dir, 6, child_dir[0].starting_block);
 
