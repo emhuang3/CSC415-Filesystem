@@ -414,14 +414,13 @@ int fs_rmdir(const char * pathname)
     }
 
     // the directory must be empty to use the rm cmd, so we will check that here.
-    for (int i = 2; i < 64; i++)
+    if (strcmp(temp_curr_dir[2].filename, "") != 0)
     {
-        if (strcmp(temp_curr_dir[i].filename, "") != 0)
-        {
-            printf("ERROR: directory is not empty.\n");
-            ret = INVALID;
-            i = 64;
-        }
+        /* first empty space will imply that all spaces on RHS are empty since all 
+        freed children in parent directory will be filled by rightmost child. */
+        
+        printf("ERROR: directory is not empty.\n");
+        ret = INVALID;
     }
 
     // if directory is empty and not root, then everything is VALID so far.
