@@ -97,14 +97,14 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 	//checking if magic number is a match
 
-	if (VCB->magic_num != 3)
+	if (VCB->magic_num != 5)
 	{
-		// THIS IS TEMPORARY
-		flush_blocks(numberOfBlocks, blockSize);
+		// this is for debugging
+		// flush_blocks(numberOfBlocks, blockSize);
 
 		printf("\nformatting volume control block...\n");
 
-		VCB->magic_num = 3;
+		VCB->magic_num = 5;
 		VCB->total_blocks = numberOfBlocks;
 		VCB->block_size = blockSize;
 		
@@ -124,35 +124,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		
 		printf("initializing root directory...\n\n");
 		create_dir(".", 700);
-
-		// -------------- TEMP PLACEMENT ----------- //
-
-		// setting current working directory to root
-		curr_dir = calloc(6, VCB->block_size);
-		
-		// checking if malloc was successful
-		if (curr_dir == NULL)
-		{
-			printf("ERROR: failed to malloc.\n");
-			exit(-1);
-		}
-
-		LBAread(curr_dir, 6, VCB->root_start);
-
-		printf("formatting complete.\n\n");
-
-		/// --------------- TEST DIRECTORIES --------------- //
-
-		fs_mkdir("/school", 511);
-		fs_mkdir("/personal", 511);
-		fs_mkdir("/games", 511);
-		fs_mkdir("/other", 511);
-
-		fs_mkdir("/personal/games", 511);
-
-		fs_mkdir("/personal/games/elden_ring", 511);
-		fs_mkdir("/personal/games/forza_5", 511);
-		fs_mkdir("/personal/games/among_us", 511);
 	}
 
 	// if VCB is already formatted, then we will bring existing freespace into memory.
