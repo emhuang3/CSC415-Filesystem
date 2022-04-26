@@ -100,7 +100,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	if (VCB->magic_num != 5)
 	{
 		// this is for debugging
-		// flush_blocks(numberOfBlocks, blockSize);
+		flush_blocks(numberOfBlocks, blockSize);
 
 		VCB->magic_num = 5;
 		VCB->total_blocks = numberOfBlocks;

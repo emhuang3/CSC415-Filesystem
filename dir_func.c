@@ -818,29 +818,22 @@ from freespace bitmap if the user chooses to overwrite a directory */
 
 void delete_this_branch(dir_entr * directory, int index)
 {
+    /* If we are just deleting a file, then we don't need a recursive call 
+     since there is no branch for a file */
+
+    if (directory[index].is_file)
+    {
+        reallocate_space(directory, index, 1);
+        memset(directory[index].filename, 0, sizeof(directory[index].filename));
+        return;
+    }
+
     // directory[index] refers to the child being deleted.
     int block_count = convert_size_to_blocks(directory[index].size, VCB->block_size);
     dir_entr * branch = malloc(block_count * VCB->block_size);
 
     // here we are getting this child into memory
     LBAread(branch, block_count, directory[index].starting_block);
-
-    /* If we are just deleting a file, then we don't need a recursive call 
-     since there is no branch for a file */
-
-    if (directory[index].is_file)
-    {
-        reallocate_space(directory, index, 0);
-        memset(directory[index].filename, 0, sizeof(directory[index].filename));
-        move_child_left(directory, index);
-
-        if (branch != NULL)
-        {
-            free(branch);
-            branch = NULL;
-        }
-        return;
-    }
     
     /* this for loop checks for dir/files. it will directly remove files from the freespace bitmap, 
     and use a recursive call to traverse through the children of a directory for removal of directories
@@ -848,23 +841,13 @@ void delete_this_branch(dir_entr * directory, int index)
 
     for (int i = 2; i < 32; i++)
     {
-        if (strcmp(branch[i].filename, "") != 0 && directory[i].is_file == 0)
+        if (strcmp(branch[i].filename, "") != 0 && branch[i].is_file == 0)
         {
-            int child_block_count = convert_size_to_blocks(branch[i].size, VCB->block_size);
-            dir_entr * child_branch = malloc(child_block_count * VCB->block_size);
-
-            LBAread(child_branch, child_block_count, branch[i].starting_block);
-            delete_this_branch(child_branch, i);
-
-            if (child_branch != NULL)
-            {
-                free(child_branch);
-                child_branch = NULL;
-            }
+            delete_this_branch(branch, i);
         }
 
         // if it is a file, then we could just delete it
-        else if (strcmp(directory[i].filename, "") != 0 && directory[i].is_file == 1)
+        else if (strcmp(branch[i].filename, "") != 0 && branch[i].is_file == 1)
         {
             reallocate_space(branch, i, 1);
         }
@@ -872,21 +855,16 @@ void delete_this_branch(dir_entr * directory, int index)
         /* Directory should be empty at this point, so we will delete self, 
          update bitmap and return 0. */
 
-        else if (i == 31)
-        {
+        else
+        {   
+            reallocate_space(directory, index, 1);
+
             // free/delete child name from parent
             memset(directory[index].filename, 0, sizeof(directory[index].filename));
-            move_child_left(directory, index);
 
             /* We passed a save state arg '1' to prevent the bitmap from being written 
             to disk until this entire process was successfully complete, so we must 
             update bitmap here. */
-            
-            reallocate_space(branch, 0, 1);
-
-            LBAwrite(buffer_bitmap, 5, 1);
-
-		    update_free_block_start();
 
 
             if (branch != NULL)
@@ -894,6 +872,7 @@ void delete_this_branch(dir_entr * directory, int index)
                 free(branch);
                 branch = NULL;
             }
+            return;
         }
     }
 }
@@ -924,6 +903,11 @@ int overwrite_dir(int index)
     {
         // this begins the overwrite process by calling this function.
         delete_this_branch(temp_curr_dir, index);
+                    
+        LBAwrite(buffer_bitmap, 5, 1);
+
+		update_free_block_start();
+
         return 0;
     }
 }
