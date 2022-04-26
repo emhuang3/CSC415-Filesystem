@@ -143,8 +143,11 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		}
 
 		LBAread(curr_dir, 6, VCB->root_start);
+
+		// updates timestamp for accessing root
 		update_time(curr_dir[0].access_time);
 		update_time(curr_dir[1].access_time);
+		LBAwrite(curr_dir, 6, VCB->root_start);
 	}
 
 	return 0;
