@@ -164,10 +164,10 @@ b_io_fd b_open (char * pathname, int flags)
 					strcpy(fcbArray[returnFd].parent_dir[i].filename, saved_filename);
 					fcbArray[returnFd].parent_dir[i].is_file = 1;
 					fcbArray[returnFd].pos_in_dest_parent = i;
-					convert_time_to_string(fcbArray[returnFd].parent_dir[i].create_time);
-					convert_time_to_string(fcbArray[returnFd].parent_dir[i].modify_time);
-					convert_time_to_string(fcbArray[returnFd].parent_dir[i].access_time);
-					convert_time_to_string(fcbArray[returnFd].parent_dir[0].modify_time);
+					update_time(fcbArray[returnFd].parent_dir[i].create_time);
+					update_time(fcbArray[returnFd].parent_dir[i].modify_time);
+					update_time(fcbArray[returnFd].parent_dir[i].access_time);
+					update_time(fcbArray[returnFd].parent_dir[0].modify_time);
 
 					i = 32;
 				}

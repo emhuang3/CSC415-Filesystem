@@ -65,7 +65,7 @@ void flush_blocks(int numOfBlocks, uint64_t blockSize)
 
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 {
-	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
+	printf ("Initializing File System with %ld blocks with a block size of %ld\n\n", numberOfBlocks, blockSize);
 
 	/* This malloc'd VCB will bring block 0 into memory to see 
 	if the existing volume's magic number is a match. This
@@ -102,8 +102,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		// this is for debugging
 		// flush_blocks(numberOfBlocks, blockSize);
 
-		printf("\nformatting volume control block...\n");
-
 		VCB->magic_num = 5;
 		VCB->total_blocks = numberOfBlocks;
 		VCB->block_size = blockSize;
@@ -112,7 +110,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		 which tracks which blocks are free to write
 		 to, and which blocks are already allocated. */
 
-		printf("initializing freespace bitmap...\n");
 		init_bitmap(); 
 
 		/* This function will update the VCB's free_block_start 
@@ -121,8 +118,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		update_free_block_start();
 
 		// this function initializes a root directory
-		
-		printf("initializing root directory...\n\n");
+
 		create_dir(".", 700);
 	}
 
@@ -147,6 +143,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		}
 
 		LBAread(curr_dir, 6, VCB->root_start);
+		update_time(curr_dir[0].access_time);
+		update_time(curr_dir[1].access_time);
 	}
 
 	return 0;

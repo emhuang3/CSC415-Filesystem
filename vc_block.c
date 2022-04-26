@@ -33,7 +33,7 @@ typedef struct dir_entr
 	char modify_time[20];
 } dir_entr;
 
-void convert_time_to_string(char my_time[20])
+void update_time(char my_time[20])
 {
 	time_t timestamp = time(NULL);
 	struct tm *ptm = gmtime(&timestamp);

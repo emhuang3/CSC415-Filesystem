@@ -66,13 +66,14 @@ int create_dir(char * name, int mode)
         temp_dir[1].starting_block = allocate_space(6);
         temp_dir[0].mode = temp_dir[1].mode = mode;
         strcpy(temp_dir[1].filename, "..");
-        convert_time_to_string(temp_dir[0].create_time);
-        convert_time_to_string(temp_dir[0].modify_time);
-        convert_time_to_string(temp_dir[0].access_time);
-        convert_time_to_string(temp_dir[1].modify_time);
-        convert_time_to_string(temp_dir[1].access_time);
+        update_time(temp_dir[0].create_time);
+        update_time(temp_dir[0].modify_time);
+        update_time(temp_dir[0].access_time);
+        update_time(temp_dir[1].create_time);
+        update_time(temp_dir[1].modify_time);
+        update_time(temp_dir[1].access_time);
 
-        printf("------------CREATED ROOT DIRECTORY------------\n");
+        // printf("------------CREATED ROOT DIRECTORY------------\n");
     }
     else // if not root, then we will make a directory here.
     {
@@ -88,26 +89,25 @@ int create_dir(char * name, int mode)
         temp_dir[0].mode = mode;
         temp_dir[1].mode = temp_curr_dir[0].mode;
         strcpy(temp_dir[1].filename, temp_curr_dir[0].filename);
-        convert_time_to_string(temp_dir[0].create_time);
-        convert_time_to_string(temp_dir[0].modify_time);
-        convert_time_to_string(temp_dir[0].access_time);
-        convert_time_to_string(temp_dir[1].modify_time);
-        convert_time_to_string(temp_dir[1].access_time);
+        update_time(temp_dir[0].create_time);
+        update_time(temp_dir[0].modify_time);
+        update_time(temp_dir[0].access_time);
+        update_time(temp_dir[1].modify_time);
+        update_time(temp_dir[1].access_time);
 
-        printf("------------CREATED NEW DIRECTORY------------\n");
+        // printf("------------CREATED NEW DIRECTORY------------\n");
     }
 
-    // TEMP INFORMATION FOR NOW
-    printf("Size of dir: %d \n", temp_dir[0].size);
-	printf("dir[0].starting_block : %d \n", temp_dir[0].starting_block);
-    printf("dir[1].starting_block : %d \n", temp_dir[1].starting_block);
-	printf("dir[0].filename : %s \n", temp_dir[0].filename);
-	printf("dir[1].filename : %s \n", temp_dir[1].filename);
-    printf("dir[0].mode : %d \n", temp_dir[0].mode);
-    printf("dir[1].mode : %d \n", temp_dir[1].mode);
-    printf("dir[0].create_time : %s \n",temp_dir[0].create_time);
-    printf("dir[0].modify_time : %s \n",temp_dir[0].modify_time);
-    printf("dir[0].access_time : %s \n\n",temp_dir[0].access_time);
+    // printf("Size of dir: %d \n", temp_dir[0].size);
+	// printf("dir[0].starting_block : %d \n", temp_dir[0].starting_block);
+    // printf("dir[1].starting_block : %d \n", temp_dir[1].starting_block);
+	// printf("dir[0].filename : %s \n", temp_dir[0].filename);
+	// printf("dir[1].filename : %s \n", temp_dir[1].filename);
+    // printf("dir[0].mode : %d \n", temp_dir[0].mode);
+    // printf("dir[1].mode : %d \n", temp_dir[1].mode);
+    // printf("dir[0].create_time : %s \n",temp_dir[0].create_time);
+    // printf("dir[0].modify_time : %s \n",temp_dir[0].modify_time);
+    // printf("dir[0].access_time : %s \n\n",temp_dir[0].access_time);
 
     // this will init all child filenames in newly created directry to empty string.
     for (int i = 2; i < 32; i++)
@@ -196,7 +196,7 @@ int validate_path(char * name)
             {
                 // temp_child_index stores a reference to this file.
                 temp_child_index = i;
-                convert_time_to_string(temp_curr_dir[i].access_time);
+                update_time(temp_curr_dir[i].access_time);
                 return FOUND_FILE;
             }
             else
@@ -222,11 +222,11 @@ int validate_path(char * name)
             temp_child_index = i;
 
             // modifying access time of child in parent
-            convert_time_to_string(temp_curr_dir[i].access_time);
+            update_time(temp_curr_dir[i].access_time);
             LBAread(temp_curr_dir, 6, temp_curr_dir[i].starting_block);
 
             // modifying access time of child in child
-            convert_time_to_string(temp_curr_dir[0].access_time);
+            update_time(temp_curr_dir[0].access_time);
 
             return VALID;
         
@@ -360,9 +360,9 @@ int fs_mkdir(const char * pathname, mode_t mode)
                 temp_curr_dir[i].mode = mode;
                 temp_curr_dir[i].size = 3072;
                 temp_curr_dir[i].is_file = 0;
-                convert_time_to_string(temp_curr_dir[i].create_time);
-                convert_time_to_string(temp_curr_dir[i].modify_time);
-                convert_time_to_string(temp_curr_dir[i].access_time);
+                update_time(temp_curr_dir[i].create_time);
+                update_time(temp_curr_dir[i].modify_time);
+                update_time(temp_curr_dir[i].access_time);
 
                 // creating the child directory
                 ret = create_dir(saved_filename, mode);
@@ -380,8 +380,8 @@ int fs_mkdir(const char * pathname, mode_t mode)
                 }
                 
                 // updating parent with new metadata of created children on disk
-                convert_time_to_string(temp_curr_dir[0].modify_time);
-                convert_time_to_string(temp_curr_dir[0].access_time);
+                update_time(temp_curr_dir[0].modify_time);
+                update_time(temp_curr_dir[0].access_time);
                 LBAwrite(temp_curr_dir, 6, temp_curr_dir[0].starting_block);
                 ret = 0; // returns 0 to shell
                 i = 32;
@@ -1009,7 +1009,7 @@ int move(char * src, char * dest)
         }
 
         // update access time for src parent here
-        convert_time_to_string(temp_dir[0].access_time);
+        update_time(temp_dir[0].access_time);
 
         // this is saving the moving child's information to move to the 'dest' directory
         memset(saved_data.filename, 0, sizeof(saved_data.filename));
@@ -1049,12 +1049,12 @@ int move(char * src, char * dest)
         // change name of moving child in parent dir
         memset(saved_data.filename, 0, sizeof(saved_data.filename));
         strcpy(saved_data.filename, saved_filename);
-        convert_time_to_string(saved_data.modify_time);
+        update_time(saved_data.modify_time);
 
         // change name in child
         memset(child_dir[0].filename, 0, sizeof(child_dir[0].filename));
         strcpy(child_dir[0].filename, saved_filename);
-        convert_time_to_string(child_dir[0].modify_time);
+        update_time(child_dir[0].modify_time);
 
         // if src and dest folders are the same
         if (temp_dir[0].starting_block == temp_curr_dir[0].starting_block)
@@ -1119,7 +1119,7 @@ int move(char * src, char * dest)
                     strcpy(temp_curr_dir[i].create_time, saved_data.create_time);
                     strcpy(temp_curr_dir[i].modify_time, saved_data.modify_time);
                     strcpy(temp_curr_dir[i].access_time, saved_data.access_time);
-                    convert_time_to_string(temp_curr_dir[0].modify_time);
+                    update_time(temp_curr_dir[0].modify_time);
 
                     i = 32;
                 }
@@ -1149,7 +1149,7 @@ int move(char * src, char * dest)
         }
 
         // update mod time for src parent here
-        convert_time_to_string(temp_dir[0].modify_time);
+        update_time(temp_dir[0].modify_time);
 
         LBAwrite(child_dir, 6, child_dir[0].starting_block);
 
