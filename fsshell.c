@@ -1,5 +1,5 @@
 /**************************************************************
-* Class:  CSC-415-0# - Fall 2021
+* Class:  CSC-415-03 - Spring 2022
 * 
 * Names: Kilian Kistenbroker, Emily Huang, Sean Locklar, 
 * Shauhin Pourshayegan
@@ -445,12 +445,18 @@ int cmd_cp2fs (int argcnt, char *argvec[])
 	do 
 		{
 		readcnt = read (linux_fd, buf, BUFFERLEN);
-		ret = b_write (testfs_fd, buf, readcnt);
-		if (ret == -1)
+		if (readcnt > -1)
 		{
-			readcnt--; // breaks while loop
+			ret = b_write (testfs_fd, buf, readcnt);
+			if (ret == -1)
+			{
+				readcnt--; // breaks while loop
+			}
 		}
-		
+		else
+		{
+			printf("invalid linux path.\n\n");
+		}
 		} while (readcnt == BUFFERLEN);
 	printf("\n");
 	b_close (testfs_fd);
