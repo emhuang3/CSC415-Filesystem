@@ -14,7 +14,8 @@
 *
 * File: b_io.c
 *
-* Description: Basic File System - Key File I/O Operations
+* Description: This file provides Key File I/O Operations by
+* defining functions in b_io.h for copy commands in fsshell.c.
 *
 **************************************************************/
 
@@ -28,7 +29,7 @@
 #include <math.h>
 
 #include "b_io.h"
-#include "dir_func.c"
+#include "mfs.c"
 
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512

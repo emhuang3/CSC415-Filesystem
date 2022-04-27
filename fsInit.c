@@ -14,9 +14,8 @@
 *
 * File: fsInit.c
 *
-* Description: Main driver for file system assignment.
-*
-* This file is where you will start and initialize your system
+* Description: This file will initialize the filesystem by
+* formatting the vcb or bringing the existing one into memory.
 *
 **************************************************************/
 
