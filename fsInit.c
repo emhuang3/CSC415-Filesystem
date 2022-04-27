@@ -73,12 +73,10 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	VCB = malloc(blockSize);
 
-	/*
-	whenevery a malloc fails, we will either exit the program,
+	/* whenevery a malloc fails, we will either exit the program,
 	or a particular cmd depending on the severity of the failure.
 	In this case we will exit the program, since a VCB buffer is
-	crucial to the functionality of our filesys.
-	*/
+	crucial to the functionality of our filesys. */
 
 	if (VCB == NULL)
 	{
