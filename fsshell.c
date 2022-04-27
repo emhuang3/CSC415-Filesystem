@@ -12,12 +12,9 @@
 *
 * Project: Basic File System
 *
-* File: fsShell.c
+* File: fsshell.c
 *
 * Description: Main driver for file system assignment.
-*
-* Make sure to set the #defined on the CMDxxxx_ON from 0 to 1 
-* when you are ready to test that feature
 *
 **************************************************************/
 
@@ -42,15 +39,15 @@
 #define DIRMAX_LEN		4096
 
 /****   SET THESE TO 1 WHEN READY TO TEST THAT COMMAND ****/
-#define CMDLS_ON	0
-#define CMDCP_ON	0
-#define CMDMV_ON	0
+#define CMDLS_ON	1
+#define CMDCP_ON	1
+#define CMDMV_ON	1
 #define CMDMD_ON	1
-#define CMDRM_ON	0
-#define CMDCP2L_ON	0
-#define CMDCP2FS_ON	0
-#define CMDCD_ON	0
-#define CMDPWD_ON	0
+#define CMDRM_ON	1
+#define CMDCP2L_ON	1
+#define CMDCP2FS_ON	1
+#define CMDCD_ON	1
+#define CMDPWD_ON	1
 
 
 typedef struct dispatch_t
@@ -108,7 +105,7 @@ int displayFiles (fdDir * dirp, int flall, int fllong)
 			if (fllong)
 				{
 				fs_stat (di->d_name, &statbuf);
-				printf ("%s    %9ld   %s\n", fs_isDir(di->d_name)?"D":"-", statbuf.st_size, di->d_name);
+				printf ("%s   %9d   %s   %s\n", di->fileType?"-":"D", di->size, di->accessed, di->d_name );
 				}
 			else
 				{
@@ -139,9 +136,9 @@ int cmd_ls (int argcnt, char *argvec[])
 		{
 		/* These options set their assigned flags to value and return 0 */
 		/* These options don't set flags and return the value */	 
-		{"long",	no_argument, 0, 'l'},  
-		{"all",		no_argument, 0, 'a'},
-		{"help",	no_argument, 0, 'h'},
+		{"long",	no_argument, (int*) 1, 'l'},  
+		{"all",		no_argument, (int*) 1, 'a'},
+		{"help",	no_argument, (int*) 1, 'h'},
 		{0,			0,       0,  0 }
 		};
 		
@@ -221,9 +218,9 @@ int cmd_ls (int argcnt, char *argvec[])
 		}
 	else   // no pathname/filename specified - use cwd
 		{
-		char * path = fs_getcwd(cwd, DIRMAX_LEN);	//get current working directory
+		// char * path = fs_getcwd(cwd, DIRMAX_LEN);	//get current working directory
 		fdDir * dirp;
-		dirp = fs_opendir (path);
+		dirp = fs_opendir (NULL);
 		return (displayFiles (dirp, flall, fllong));
 		}
 #endif
@@ -244,6 +241,7 @@ int cmd_cp (int argcnt, char *argvec[])
 	char * dest;
 	int readcnt;
 	char buf[BUFFERLEN];
+	int ret;
 	
 	switch (argcnt)
 		{
@@ -261,15 +259,21 @@ int cmd_cp (int argcnt, char *argvec[])
 			printf("Usage: cp srcfile [destfile]\n");
 			return (-1);
 		}
-	
+
 	
 	testfs_src_fd = b_open (src, O_RDONLY);
 	testfs_dest_fd = b_open (dest, O_WRONLY | O_CREAT | O_TRUNC);
 	do 
-		{
+	{
 		readcnt = b_read (testfs_src_fd, buf, BUFFERLEN);
-		b_write (testfs_dest_fd, buf, readcnt);
-		} while (readcnt == BUFFERLEN);
+		ret = b_write (testfs_dest_fd, buf, readcnt);
+		
+		if (ret == -1)
+		{
+			readcnt--;
+		}
+	} while (readcnt == BUFFERLEN);
+	printf("\n");
 	b_close (testfs_src_fd);
 	b_close (testfs_dest_fd);
 #endif
@@ -281,9 +285,31 @@ int cmd_cp (int argcnt, char *argvec[])
 ****************************************************/
 int cmd_mv (int argcnt, char *argvec[])
 	{
-#if (CMDMV_ON == 1)				
-	return -99;
+#if (CMDMV_ON == 1)		
+	int ret;		
+	
 	// **** TODO ****  For you to implement	
+	if (argcnt > 2)
+	{
+		char * src = argvec[1];
+		char * dest = argvec[2];
+
+		ret = move(src, dest);
+		if (ret < 0)
+		{
+			printf("did not move directory.\n\n");
+		}
+		else 
+		{
+			printf("move directory completed.\n\n");
+		}
+	}
+	else
+	{
+		printf("Usage: mv [src] [dest]\n\n");
+	}
+	
+	
 #endif
 	return 0;
 	}
@@ -332,7 +358,7 @@ int cmd_rm (int argcnt, char *argvec[])
 		return (fs_delete(path));
 		}	
 		
-	printf("The path %s is neither a file not a directory\n", path);
+	printf("The path %s is neither a file nor a directory\n", path);
 #endif
 	return -1;
 	}
@@ -375,6 +401,7 @@ int cmd_cp2l (int argcnt, char *argvec[])
 		readcnt = b_read (testfs_fd, buf, BUFFERLEN);
 		write (linux_fd, buf, readcnt);
 		} while (readcnt == BUFFERLEN);
+	printf("\n");
 	b_close (testfs_fd);
 	close (linux_fd);
 #endif
@@ -393,6 +420,7 @@ int cmd_cp2fs (int argcnt, char *argvec[])
 	char * dest;
 	int readcnt;
 	char buf[BUFFERLEN];
+	int ret;
 	
 	switch (argcnt)
 		{
@@ -417,8 +445,14 @@ int cmd_cp2fs (int argcnt, char *argvec[])
 	do 
 		{
 		readcnt = read (linux_fd, buf, BUFFERLEN);
-		b_write (testfs_fd, buf, readcnt);
+		ret = b_write (testfs_fd, buf, readcnt);
+		if (ret == -1)
+		{
+			readcnt--; // breaks while loop
+		}
+		
 		} while (readcnt == BUFFERLEN);
+	printf("\n");
 	b_close (testfs_fd);
 	close (linux_fd);
 #endif
@@ -452,7 +486,7 @@ int cmd_cd (int argcnt, char *argvec[])
 		{
 		printf ("Could not change path to %s\n", path);
 		return (ret);
-		}			
+		}	
 #endif
 	return 0;
 	}
@@ -472,7 +506,7 @@ int cmd_pwd (int argcnt, char *argvec[])
 		}
 	else
 		{
-		printf ("%s\n", ptr);
+		printf ("%s\n\n", ptr);
 		}
 	free (dir_buf);
 	dir_buf = NULL;
