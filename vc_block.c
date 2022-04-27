@@ -13,6 +13,7 @@ typedef struct vcb
 	int total_blocks;
 	int free_block_start;
 	int root_start;
+	int root_size;
 } vcb;
 
 // VCB is declared globally here
@@ -28,11 +29,8 @@ typedef struct dir_entr
 	// used tell if this is a file or directory
 	int is_file;
 
-	// will replace time, user_ID, group_ID with modified, created, and accessed timestamps
-	int time;
-
-	int permissions;
-	
+	int count;
+	int mode;
 	uid_t user_ID;
 	gid_t group_ID;
 
