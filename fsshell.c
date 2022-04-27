@@ -1,5 +1,5 @@
 /**************************************************************
-* Class:  CSC-415-0# - Fall 2021
+* Class:  CSC-415-03 - Spring 2022
 * 
 * Names: Kilian Kistenbroker, Emily Huang, Sean Locklar, 
 * Shauhin Pourshayegan
