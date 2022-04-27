@@ -1052,12 +1052,15 @@ int move(char * src, char * dest)
         ret = -1;
     }
 
-    // if dest is a child of the moving src, then we cannot move
-    ret = compare_to_src(child_dir, temp_curr_dir);
-    if (ret == -1)
+    // if dest path contains a child of the moving src, then we cannot move this directory
+    if (temp_dir[saved_index].is_file == 0)
     {
-        printf("cannot move into child directory.\n");
-        ret = -1;
+        ret = compare_to_src(child_dir, temp_curr_dir);
+        if (ret == -1)
+        {
+            printf("cannot move into child directory.\n");
+            ret = -1;
+        }
     }
 
 

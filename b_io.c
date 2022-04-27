@@ -228,8 +228,8 @@ b_io_fd b_open (char * pathname, int flags)
 
 		LBAread(fcbArray[returnFd].buf, block_count, fcbArray[returnFd].parent_dir[file_index].starting_block);
 
-		printf("openned %s in parent directory: %s with fd %d.\n", 
-		fcbArray[returnFd].parent_dir[file_index].filename, fcbArray[returnFd].parent_dir[0].filename, returnFd);
+		printf("openned '%s' in parent directory: '%s'.\n", 
+		fcbArray[returnFd].parent_dir[file_index].filename, fcbArray[returnFd].parent_dir[0].filename);
 		return (returnFd);
 	}
 
