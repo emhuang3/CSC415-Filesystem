@@ -14,7 +14,8 @@
 *
 * File: b_io.c
 *
-* Description: Basic File System - Key File I/O Operations
+* Description: This file provides Key File I/O Operations by
+* defining functions in b_io.h for copy commands in fsshell.c.
 *
 **************************************************************/
 
@@ -28,7 +29,7 @@
 #include <math.h>
 
 #include "b_io.h"
-#include "dir_func.c"
+#include "mfs.c"
 
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
@@ -151,7 +152,7 @@ b_io_fd b_open (char * pathname, int flags)
 		if (flags & O_CREAT)
 		{
 			// this for loop finds a free space to put file in 'dest' parent directory
-			for (int i = 0; i < 64; i++)
+			for (int i = 0; i < 32; i++)
 			{
 
 				if (strcmp(fcbArray[returnFd].parent_dir[i].filename, "") == 0)
@@ -164,9 +165,14 @@ b_io_fd b_open (char * pathname, int flags)
 					strcpy(fcbArray[returnFd].parent_dir[i].filename, saved_filename);
 					fcbArray[returnFd].parent_dir[i].is_file = 1;
 					fcbArray[returnFd].pos_in_dest_parent = i;
-					i = 64;
+					update_time(fcbArray[returnFd].parent_dir[i].create_time);
+					update_time(fcbArray[returnFd].parent_dir[i].modify_time);
+					update_time(fcbArray[returnFd].parent_dir[i].access_time);
+					update_time(fcbArray[returnFd].parent_dir[0].modify_time);
+
+					i = 32;
 				}
-				else if (i == 63)
+				else if (i == 31)
 				{
 					printf("ERROR: unable to find free space in the parent directory.\n");
 					return -1;
@@ -223,8 +229,8 @@ b_io_fd b_open (char * pathname, int flags)
 
 		LBAread(fcbArray[returnFd].buf, block_count, fcbArray[returnFd].parent_dir[file_index].starting_block);
 
-		printf("openned %s in parent directory: %s with fd %d.\n", 
-		fcbArray[returnFd].parent_dir[file_index].filename, fcbArray[returnFd].parent_dir[0].filename, returnFd);
+		printf("openned '%s' in parent directory: '%s'.\n", 
+		fcbArray[returnFd].parent_dir[file_index].filename, fcbArray[returnFd].parent_dir[0].filename);
 		return (returnFd);
 	}
 
