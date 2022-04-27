@@ -912,6 +912,32 @@ int overwrite_dir(int index)
     }
 }
 
+// this helper function ensures that the user is not moving a parent into one of its children
+int compare_to_src(dir_entr * src, dir_entr * dest)
+{
+    dir_entr * compare = calloc(6, VCB->block_size);
+    LBAread(compare, 6, dest[0].starting_block);
+
+// this for loop will iterate up the directory tree until we reach the root directory
+    while (strcmp(compare[0].filename, ".") != 0)
+    {
+        // here we are comparing the moving src with all parent nodes of the dest branch
+        if (src[0].starting_block == compare[0].starting_block)
+        {
+            return -1;
+        }
+        LBAread(compare, 6, compare[1].starting_block);
+    }
+    if (compare != NULL)
+    {
+        free(compare);
+        compare = NULL;
+    }
+    
+
+    return 0;
+}
+
 /* This function is called when a user passes the 'mv' cmd. Parameter 'src' will be passed 
 into parse_pathname() until temp_curr_dir is updated to store the file/directory the user 
 wants to move. the moving child's parent will be stored into a 'temp_dir' buffer. The moving
@@ -936,6 +962,7 @@ int move(char * src, char * dest)
     }
 
     int ret = parse_pathname(src);
+
 
     // this will be used for changing filename in same directory
     int saved_index = temp_child_index; 
@@ -1024,6 +1051,15 @@ int move(char * src, char * dest)
         printf("failed to malloc in move.\n");
         ret = -1;
     }
+
+    // if dest is a child of the moving src, then we cannot move
+    ret = compare_to_src(child_dir, temp_curr_dir);
+    if (ret == -1)
+    {
+        printf("cannot move into child directory.\n");
+        ret = -1;
+    }
+
 
     /* this if statement implies that the final path is invalid after calling parse_pathname().
     In this case we will rename the moving the file to the filename of the last path given by the user. */
