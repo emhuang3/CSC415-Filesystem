@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+<<<<<<< HEAD
+        "types.h": "c"
+=======
+        "mfs.h": "c"
+>>>>>>> c82b1ced12211d7970f9d00bd4343c27531a8d24
+    }
+}

@@ -37,8 +37,13 @@ typedef u_int32_t uint32_t;
 struct fs_diriteminfo
 	{
     unsigned short d_reclen;    /* length of this record */
-    unsigned char fileType;    
+    unsigned char fileType;
+	int size;    
+	char * accesstime;
+	char * modtime;
+	char * createtime;
     char d_name[256]; 			/* filename max filename is 255 characters */
+	char accessed[20];
 	};
 
 // This is a private structure used only by fs_opendir, fs_readdir, and fs_closedir
@@ -52,11 +57,14 @@ typedef struct
 	unsigned short  d_reclen;		/*length of this record */
 	unsigned short	dirEntryPosition;	/*which directory entry position, like file pos */
 	uint64_t	directoryStartLocation;		/*Starting LBA of directory */
+	int size;
+	char * filepath;
 	} fdDir;
 
 // Key directory functions
 int fs_mkdir(const char *pathname, mode_t mode);
 int fs_rmdir(const char *pathname);
+int move(char * src, char * dest);
 
 // Directory iteration functions
 fdDir * fs_opendir(const char *name);
@@ -77,9 +85,9 @@ struct fs_stat
 	off_t     st_size;    		/* total size, in bytes */
 	blksize_t st_blksize; 		/* blocksize for file system I/O */
 	blkcnt_t  st_blocks;  		/* number of 512B blocks allocated */
-	time_t    st_accesstime;   	/* time of last access */
+	char *    st_accesstime;   	/* time of last access */
 	time_t    st_modtime;   	/* time of last modification */
-	time_t    st_createtime;   	/* time of last status change */
+	char *    st_createtime;   	/* time of last status change */
 	
 	/* add additional attributes here for your file system */
 	};
@@ -87,4 +95,3 @@ struct fs_stat
 int fs_stat(const char *path, struct fs_stat *buf);
 
 #endif
-
