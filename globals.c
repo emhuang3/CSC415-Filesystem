@@ -54,6 +54,9 @@ typedef struct dir_entr
 	char modify_time[20];
 } dir_entr;
 
+/* This function gets the current time of the user's system clock, 
+and converts it into a string. */
+
 void update_time(char buffer[20])
 {
 	time_t timestamp = time(NULL);
